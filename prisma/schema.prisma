@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー設定（Supabase Authと連携）
+model UserSettings {
+  id              String    @id @default(uuid())
+  githubUsername  String?   @map("github_username")
+  githubToken     String?   @map("github_token")
+  githubRepo      String?   @map("github_repo")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  goals           Goal[]
+  efforts         Effort[]
+  dailyRecords    DailyRecord[]
+  streak          Streak?
+
+  @@map("user_settings")
+}
+
+// 目標（Bronze/Silver/Gold）
+model Goal {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  level       String   // 'bronze' | 'silver' | 'gold'
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        UserSettings @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level])
+  @@map("goals")
+}
+
+// 工夫（各目標レベルに紐づく施策）
+model Effort {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  goalLevel   String    @map("goal_level") // 'bronze' | 'silver' | 'gold'
+  title       String
+  description String?
+  status      String    @default("active") // 'active' | 'archived'
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  activatedAt DateTime? @map("activated_at")
+
+  user              UserSettings       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effortEvaluations EffortEvaluation[]
+
+  @@map("efforts")
+}
+
+// 日次記録（毎日のPDCAと達成レベル）
+model DailyRecord {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  date             String   // YYYY-MM-DD形式
+  achievementLevel String   @default("none") @map("achievement_level") // 'none' | 'bronze' | 'silver' | 'gold'
+  planText         String?  @map("plan_text")
+  doText           String?  @map("do_text")
+  checkText        String?  @map("check_text")
+  actText          String?  @map("act_text")
+  journalText      String?  @map("journal_text") // 自由記述
+  stepUpStrategy   String?  @map("step_up_strategy") // Step-Up Strategy
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user              UserSettings       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effortEvaluations EffortEvaluation[]
+
+  @@unique([userId, date])
+  @@map("daily_records")
+}
+
+// 工夫の評価（日次記録ごとの工夫の効果測定）
+model EffortEvaluation {
+  id            String   @id @default(uuid())
+  dailyRecordId String   @map("daily_record_id")
+  effortId      String   @map("effort_id")
+  executed      String   // 'yes' | 'no' | 'first_day' （実行できた/できなかった/再開初日）
+  effectiveness String   // 'excellent' | 'moderate' | 'negative' | 'not_evaluated' （最高/微妙/逆効果/未評価）
+  nextAction    String?  @map("next_action") // 'continue' | 'improve' | 'stop' （そのまま継続/改良して継続/今日で終了）
+  reason        String?  // 終了理由または改良案
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  dailyRecord DailyRecord @relation(fields: [dailyRecordId], references: [id], onDelete: Cascade)
+  effort      Effort      @relation(fields: [effortId], references: [id], onDelete: Restrict)
+
+  @@unique([dailyRecordId, effortId])
+  @@map("effort_evaluations")
+}
+
+// ストリーク情報（連続記録日数）
+model Streak {
+  id               String    @id @default(uuid())
+  userId           String    @unique @map("user_id")
+  currentStreak    Int       @default(0) @map("current_streak")
+  longestStreak    Int       @default(0) @map("longest_streak")
+  lastRecordedDate String?   @map("last_recorded_date") // YYYY-MM-DD形式
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user UserSettings @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
