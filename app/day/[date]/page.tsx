@@ -1,14 +1,11 @@
-// 日詳細画面（実装計画書に従った実装）
+// 日詳細画面（シンプル版）
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { getDailyRecordWithDetails } from '@/lib/db';
+import { getDailyRecordByDate } from '@/lib/db';
 import {
   formatDateJP,
   getLevelLabel,
-  getLevelBadgeClass,
-  getExecutedLabel,
-  getEffectivenessLabel,
-  getNextActionLabel
+  getLevelBadgeClass
 } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -22,7 +19,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
   const { date } = resolvedParams;
 
   // 日付の記録を取得
-  const record = await getDailyRecordWithDetails(date);
+  const record = await getDailyRecordByDate(date);
 
   if (!record) {
     return (
@@ -58,6 +55,11 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
           </Link>
         </div>
 
+        {/* 日付 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-2xl font-bold text-slate-800">{formatDateJP(date)}</h2>
+        </div>
+
         {/* 達成度 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-4">達成度</h2>
@@ -70,75 +72,18 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
           </span>
         </div>
 
-        {/* 工夫の評価 */}
-        {record.effortEvaluations.length > 0 && (
+        {/* 学習内容サマリー */}
+        {record.doText && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">工夫の評価</h2>
-            <div className="space-y-4">
-              {record.effortEvaluations.map(evaluation => (
-                <div key={evaluation.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-medium text-slate-800">{evaluation.effort.title}</h3>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-semibold ${getLevelBadgeClass(
-                        evaluation.effort.goalLevel
-                      )}`}
-                    >
-                      {evaluation.effort.goalLevel}
-                    </span>
-                  </div>
-                  {evaluation.effort.description && (
-                    <p className="text-sm text-slate-600 mb-3">{evaluation.effort.description}</p>
-                  )}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600">実行:</span>
-                      <span className="text-slate-800 font-medium">
-                        {getExecutedLabel(evaluation.executed)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600">効果:</span>
-                      <span className="text-slate-800 font-medium">
-                        {getEffectivenessLabel(evaluation.effectiveness)}
-                      </span>
-                    </div>
-                    {evaluation.nextAction && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-600">次回:</span>
-                        <span className="text-slate-800 font-medium">
-                          {getNextActionLabel(evaluation.nextAction)}
-                        </span>
-                      </div>
-                    )}
-                    {evaluation.reason && (
-                      <div className="mt-2 p-2 bg-gray-50 rounded">
-                        <p className="text-sm text-slate-700">{evaluation.reason}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">学習内容サマリー</h2>
+            <p className="text-slate-700 whitespace-pre-wrap">{record.doText}</p>
           </div>
         )}
 
-        {/* Step-Up Strategy */}
-        {record.stepUpStrategy && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
-              次のレベルへの架け橋（Step-Up Strategy）
-            </h2>
-            <p className="text-slate-700 whitespace-pre-wrap">{record.stepUpStrategy}</p>
-          </div>
-        )}
-
-        {/* Journal */}
+        {/* 自由記述（Journal） */}
         {record.journalText && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
-              自由記述 / 今日のひとこと
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">自由記述</h2>
             <p className="text-slate-700 whitespace-pre-wrap">{record.journalText}</p>
           </div>
         )}

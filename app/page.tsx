@@ -3,8 +3,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import {
   getDailyRecords,
-  getSuggestion,
-  getGitHubCommits
+  getSuggestion
 } from '@/lib/db';
 import {
   formatDate,
@@ -14,6 +13,7 @@ import {
 import Link from 'next/link';
 import { MOCK_USER_ID } from '@/lib/mockData';
 import { DailyReportCard } from '@/types';
+import { SuggestionBanner } from '@/components/SuggestionBanner';
 
 // 日付を「2025年12月31日（火）」形式にフォーマット
 function formatDateDisplay(dateStr: string): string {
@@ -36,148 +36,91 @@ export default async function HomePage() {
   // 1. 今日の日付を取得
   const today = formatDate(new Date());
 
-  // 2. 過去7日分の記録を取得（新しい順）
+  // 2. 過去14日分の記録を取得
   const endDate = today;
-  const startDate = formatDate(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+  const startDate = formatDate(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const records = await getDailyRecords(MOCK_USER_ID, { startDate, endDate });
 
-  // 3. GitHubコミット履歴を取得
-  const allGitHubCommits = await getGitHubCommits();
+  // 3. デイリーレポートカードデータを生成（記録がある日のみ、新しい順）
+  const dailyReportCards: DailyReportCard[] = records
+    .map(record => {
+      // doTextから学習内容を抽出（改行区切り、最大3件）
+      const learningItems = record.doText
+        ? record.doText
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .slice(0, 3)
+        : [];
 
-  // 4. デイリーレポートカードデータを生成（過去7日分、新しい順）
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - i); // 0, -1, -2, ... -6（新しい順）
-    return formatDate(date);
-  });
+      return {
+        date: record.date,
+        displayDate: formatDateDisplay(record.date),
+        achievementLevel: record.achievementLevel,
+        learningItems,
+        journalExcerpt: createJournalExcerpt(record.journalText),
+      };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date)); // 新しい順
 
-  const dailyReportCards: DailyReportCard[] = last7Days.map(date => {
-    const record = records.find(r => r.date === date);
-
-    // その日のコミットを抽出（最大3件）
-    const dayCommits = allGitHubCommits
-      .filter(commit => {
-        const commitDate = formatDate(new Date(commit.date));
-        return commitDate === date;
-      })
-      .slice(0, 3);
-
-    return {
-      date,
-      displayDate: formatDateDisplay(date),
-      achievementLevel: record?.achievementLevel || 'none',
-      commits: dayCommits,
-      journalExcerpt: createJournalExcerpt(record?.journalText),
-      hasRecord: !!record
-    };
-  });
-
-  // 5. 提案バナーの表示判定
+  // 4. 提案バナーの表示判定
   const suggestion = await getSuggestion();
-
-  // 6. 過去7日分のドットマップデータを生成（古い順）
-  const last7DaysForDots = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return formatDate(date);
-  });
-
-  const last7DaysData = last7DaysForDots.map(date => {
-    const record = records.find(r => r.date === date);
-    return {
-      date,
-      achievementLevel: record?.achievementLevel || 'none',
-      color: record ? getLevelColor(record.achievementLevel) : '#E5E7EB'
-    };
-  });
 
   return (
     <AppLayout pageTitle="ホーム">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* メインエリア: デイリーレポートカード一覧 */}
-        <div className="flex-1 space-y-4">
-          {dailyReportCards.map((card) => (
-            <Link
-              key={card.date}
-              href={`/day/${card.date}`}
-              className="block bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              {/* 日付と達成度バッジ */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-slate-800">{card.displayDate}</h3>
-                <span
-                  className="px-3 py-1 rounded-lg text-white text-sm font-semibold"
-                  style={{ backgroundColor: getLevelColor(card.achievementLevel) }}
-                >
-                  {getLevelLabel(card.achievementLevel)}
-                </span>
-              </div>
-
-              {/* 学習内容サマリー（GitHubコミット） */}
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-slate-700 mb-2">学習内容</h4>
-                {card.commits.length === 0 ? (
-                  <p className="text-sm text-slate-400">コミットなし</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {card.commits.map((commit) => (
-                      <li key={commit.sha} className="flex items-start gap-2 text-sm text-slate-600">
-                        <span className="text-slate-400 mt-0.5">•</span>
-                        <span className="line-clamp-1">{commit.message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* 日報の抜粋 */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-2">日報</h4>
-                {card.journalExcerpt ? (
-                  <p className="text-sm text-slate-600 line-clamp-2">{card.journalExcerpt}</p>
-                ) : (
-                  <p className="text-sm text-slate-400">日報なし</p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* サイドエリア: サマリー */}
-        <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
-          {/* 過去7日間の達成度ビジュアライザー */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">過去7日間の達成度</h3>
-            <div className="flex justify-between items-center gap-2">
-              {last7DaysData.map((day) => (
-                <div key={day.date} className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-8 h-8 rounded-full"
-                    style={{ backgroundColor: day.color }}
-                    title={`${day.date}: ${getLevelLabel(day.achievementLevel)}`}
-                  />
-                  <span className="text-xs text-slate-500">
-                    {new Date(day.date + 'T00:00:00').getDate()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 提案バナー */}
-          {suggestion && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 mb-3">{suggestion.message}</p>
-              <Link
-                href="/goals"
-                className="block w-full text-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+      {/* デイリーレポートカードグリッド */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {dailyReportCards.map((card) => (
+          <Link
+            key={card.date}
+            href={`/day/${card.date}`}
+            className="block bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+          >
+            {/* 日付と達成度バッジ */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">
+                {card.displayDate}
+              </h3>
+              <span
+                className="px-3 py-1 rounded-full text-sm font-medium text-white"
+                style={{ backgroundColor: getLevelColor(card.achievementLevel) }}
               >
-                目標を編集する
-              </Link>
+                {getLevelLabel(card.achievementLevel)}
+              </span>
             </div>
-          )}
-        </div>
+
+            {/* 学習内容 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-2">学習内容</h4>
+              {card.learningItems.length === 0 ? (
+                <p className="text-sm text-slate-400">学習内容の記録なし</p>
+              ) : (
+                <ul className="space-y-1">
+                  {card.learningItems.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-slate-600">
+                      <span className="text-slate-400 mt-0.5">•</span>
+                      <span className="line-clamp-1">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* 日報抜粋 */}
+            {card.journalExcerpt && (
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-medium text-slate-700 mb-2">日報</h4>
+                <p className="text-sm text-slate-600 line-clamp-2">
+                  {card.journalExcerpt}
+                </p>
+              </div>
+            )}
+          </Link>
+        ))}
       </div>
+
+      {/* 提案バナー（右下固定） */}
+      <SuggestionBanner suggestion={suggestion} />
     </AppLayout>
   );
 }

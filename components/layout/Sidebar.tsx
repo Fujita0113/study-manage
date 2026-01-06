@@ -4,12 +4,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HomeIcon, CalendarIcon, SettingsIcon, EffortIcon } from '../icons';
+import { HomeIcon, CalendarIcon, SettingsIcon, HistoryIcon } from '../icons';
 
 const navItems = [
   { href: '/', label: 'ホーム', icon: HomeIcon },
+  { href: '/record', label: '記録', icon: HomeIcon }, // TODO: RecordIconに変更
   { href: '/calendar', label: 'カレンダー', icon: CalendarIcon },
-  { href: '/efforts', label: '工夫管理', icon: EffortIcon },
+  { href: '/history', label: '目標変遷', icon: HistoryIcon },
   { href: '/settings', label: '設定', icon: SettingsIcon },
 ];
 

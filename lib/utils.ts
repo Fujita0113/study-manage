@@ -1,6 +1,6 @@
 // ユーティリティ関数
 
-import type { GoalLevel, AchievementLevel, EffortExecuted, EffortEffectiveness, EffortNextAction } from '@/types';
+import type { GoalLevel, AchievementLevel } from '@/types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -90,56 +90,6 @@ export function getLevelLabel(level: AchievementLevel | GoalLevel): string {
       return 'Silver';
     case 'gold':
       return 'Gold';
-    default:
-      return '';
-  }
-}
-
-/**
- * 実感効果のラベルを取得
- */
-export function getEffectivenessLabel(effectiveness: EffortEffectiveness): string {
-  switch (effectiveness) {
-    case 'excellent':
-      return '最高';
-    case 'moderate':
-      return '微妙';
-    case 'negative':
-      return '逆効果';
-    case 'not_evaluated':
-      return '未評価';
-    default:
-      return '未評価';
-  }
-}
-
-/**
- * 実行フラグのラベルを取得
- */
-export function getExecutedLabel(executed: EffortExecuted): string {
-  switch (executed) {
-    case 'yes':
-      return '実行できた';
-    case 'no':
-      return 'できなかった';
-    case 'first_day':
-      return '再開初日';
-    default:
-      return '';
-  }
-}
-
-/**
- * 次のアクションのラベルを取得
- */
-export function getNextActionLabel(nextAction: EffortNextAction): string {
-  switch (nextAction) {
-    case 'continue':
-      return 'そのまま継続';
-    case 'improve':
-      return '改良して継続';
-    case 'stop':
-      return '今日で終了';
     default:
       return '';
   }

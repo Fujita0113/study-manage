@@ -3,11 +3,12 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import type { Streak } from '@/types';
-import { mockData } from './mockData';
+import type { Streak, GoalHistory } from '@/types';
+import { mockStreak, mockGoalHistory } from './mockData';
 
 interface AppStateContextType {
   getStreakDays: () => number;
+  getGoalHistory: () => GoalHistory;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -15,13 +16,19 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 export function AppStateProvider({ children }: { children: ReactNode }) {
   // 連続達成日数を取得
   const getStreakDays = (): number => {
-    return mockData.streak.currentStreak;
+    return mockStreak.currentStreak;
+  };
+
+  // 目標変遷履歴を取得
+  const getGoalHistory = (): GoalHistory => {
+    return mockGoalHistory;
   };
 
   return (
     <AppStateContext.Provider
       value={{
         getStreakDays,
+        getGoalHistory,
       }}
     >
       {children}

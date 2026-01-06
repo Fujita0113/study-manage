@@ -4,24 +4,9 @@ export type GoalLevel = 'bronze' | 'silver' | 'gold';
 // Achievement Levels
 export type AchievementLevel = 'none' | 'bronze' | 'silver' | 'gold';
 
-// Effort Status
-export type EffortStatus = 'active' | 'archived';
-
-// Effort Evaluation - Executed
-export type EffortExecuted = 'yes' | 'no' | 'first_day';
-
-// Effort Evaluation - Effectiveness
-export type EffortEffectiveness = 'excellent' | 'moderate' | 'negative' | 'not_evaluated';
-
-// Effort Evaluation - Next Action
-export type EffortNextAction = 'continue' | 'improve' | 'stop';
-
 // User Settings
 export interface UserSettings {
   id: string;
-  githubUsername?: string;
-  githubToken?: string;
-  githubRepo?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,44 +21,14 @@ export interface Goal {
   updatedAt: Date;
 }
 
-// Effort
-export interface Effort {
-  id: string;
-  userId: string;
-  goalLevel: GoalLevel;
-  title: string;
-  description?: string;
-  status: EffortStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  activatedAt?: Date;
-}
-
 // Daily Record
 export interface DailyRecord {
   id: string;
   userId: string;
   date: string; // YYYY-MM-DD
   achievementLevel: AchievementLevel;
-  planText?: string;
   doText?: string;
-  checkText?: string;
-  actText?: string;
   journalText?: string;
-  stepUpStrategy?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Effort Evaluation
-export interface EffortEvaluation {
-  id: string;
-  dailyRecordId: string;
-  effortId: string;
-  executed: EffortExecuted;
-  effectiveness: EffortEffectiveness;
-  nextAction?: EffortNextAction;
-  reason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,25 +41,6 @@ export interface Streak {
   longestStreak: number;
   lastRecordedDate?: string; // YYYY-MM-DD
   updatedAt: Date;
-}
-
-// Extended types for UI
-
-export interface EffortWithEvaluation extends Effort {
-  evaluation?: EffortEvaluation;
-}
-
-export interface DailyRecordWithDetails extends DailyRecord {
-  effortEvaluations: (EffortEvaluation & { effort: Effort })[];
-}
-
-// GitHub Commit Data
-export interface GitHubCommit {
-  sha: string;
-  message: string;
-  author: string;
-  date: string;
-  url: string;
 }
 
 // Suggestion Banner Types
@@ -122,12 +58,47 @@ export interface DailyReportCard {
   date: string; // YYYY-MM-DD
   displayDate: string; // "2025年12月31日（火）" 形式
   achievementLevel: AchievementLevel;
-  commits: GitHubCommit[]; // その日のコミット（最大3件）
+  learningItems: string[]; // ユーザー入力の学習内容（doTextから生成、最大3件）
   journalExcerpt?: string; // 日報の抜粋（100文字程度）
-  hasRecord: boolean; // 記録があるかどうか
 }
 
+// Goal History
+export type GoalChangeReason =
+  | 'bronze_14days'    // Bronze 14日連続達成
+  | 'silver_14days'    // Silver 14日連続達成
+  | 'gold_14days'      // Gold 14日連続達成
+  | '7days_4fails'     // 7日中4日未達
+  | 'initial';         // 初回設定
 
+export interface GoalHistorySlot {
+  id: string;
+  userId: string;
+  bronzeGoal: string;
+  silverGoal: string;
+  goldGoal: string;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD、現在進行中の場合はundefined
+  changeReason: GoalChangeReason;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
+// Goal History - New UI Design (独立したカード表示用)
+export type TransitionType = 'level_up' | 'level_down' | null;
 
+export interface GoalCard {
+  id: string;
+  level: GoalLevel;
+  content: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string | null; // nullの場合は現在進行中
+  transitionType: TransitionType; // 次のカードへの遷移タイプ
+  currentStreak?: number; // 現在進行中のカードのみ（各レベルで個別に管理）
+}
+
+export interface GoalHistory {
+  bronze: GoalCard[];
+  silver: GoalCard[];
+  gold: GoalCard[];
+}
 

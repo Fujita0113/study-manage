@@ -1,20 +1,28 @@
 'use client';
 
-// 目標編集画面（実装計画書に従った実装）
+// 目標編集画面
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getGoals, updateGoal } from '@/lib/db';
-import type { Goal, GoalLevel } from '@/types';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getGoals, updateGoal, createGoalHistorySlot } from '@/lib/db';
+import type { Goal, GoalLevel, GoalChangeReason } from '@/types';
 
-export default function GoalsPage() {
+function GoalsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editParam = searchParams.get('edit'); // 'bronze' | 'silver' | 'gold' | 'all'
+
   const [goals, setGoals] = useState<Goal[]>([]);
   const [bronzeDesc, setBronzeDesc] = useState('');
   const [silverDesc, setSilverDesc] = useState('');
   const [goldDesc, setGoldDesc] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // 編集可能かどうかを判定
+  const canEditBronze = !editParam || editParam === 'bronze' || editParam === 'silver' || editParam === 'gold' || editParam === 'all';
+  const canEditSilver = !editParam || editParam === 'silver' || editParam === 'gold' || editParam === 'all';
+  const canEditGold = !editParam || editParam === 'gold' || editParam === 'all';
 
   // データ取得
   useEffect(() => {
@@ -49,15 +57,44 @@ export default function GoalsPage() {
     }
 
     try {
+      // 1. Goalテーブルを更新
       await updateGoal('bronze', bronzeDesc.trim());
       await updateGoal('silver', silverDesc.trim());
       await updateGoal('gold', goldDesc.trim());
+
+      // 2. 新しい目標履歴スロットを作成
+      const changeReason = determineChangeReason(editParam);
+      await createGoalHistorySlot(
+        bronzeDesc.trim(),
+        silverDesc.trim(),
+        goldDesc.trim(),
+        changeReason
+      );
+
       router.push('/');
     } catch (error) {
       console.error('Failed to update goals:', error);
       alert('目標の更新に失敗しました');
     }
   };
+
+  /**
+   * editパラメータから変更理由を判定
+   */
+  function determineChangeReason(editParam: string | null): GoalChangeReason {
+    switch (editParam) {
+      case 'bronze':
+        return 'bronze_14days';
+      case 'silver':
+        return 'silver_14days';
+      case 'gold':
+        return 'gold_14days';
+      case 'all':
+        return '7days_4fails';
+      default:
+        return 'initial';
+    }
+  }
 
   if (loading) {
     return (
@@ -78,17 +115,32 @@ export default function GoalsPage() {
             3段階の目標を設定してください。Bronze（最低限）、Silver（計画通り）、Gold（期待以上）の順で難易度が上がります。
           </p>
 
+          {/* 権限に応じた説明メッセージ */}
+          {editParam && editParam !== 'all' && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium">
+                {editParam === 'bronze' && '🎉 Bronze目標のみ編集可能です（14日連続達成おめでとうございます！）'}
+                {editParam === 'silver' && '🎉 Bronze・Silver目標が編集可能です（Silver 14日連続達成おめでとうございます！）'}
+                {editParam === 'gold' && '🎉 すべての目標が編集可能です（Gold 14日連続達成おめでとうございます！）'}
+              </p>
+            </div>
+          )}
+
           <div className="space-y-6">
             {/* Bronze目標 */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Bronze目標（最低限）
+                {!canEditBronze && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
               </label>
               <input
                 type="text"
                 value={bronzeDesc}
                 onChange={e => setBronzeDesc(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!canEditBronze}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  !canEditBronze ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                }`}
                 placeholder="例: 30分だけプログラミングする"
               />
               <p className="text-xs text-slate-500 mt-1">
@@ -100,12 +152,16 @@ export default function GoalsPage() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Silver目標（計画通り）
+                {!canEditSilver && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
               </label>
               <input
                 type="text"
                 value={silverDesc}
                 onChange={e => setSilverDesc(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!canEditSilver}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  !canEditSilver ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                }`}
                 placeholder="例: 1つの機能を完成させる"
               />
               <p className="text-xs text-slate-500 mt-1">
@@ -117,12 +173,16 @@ export default function GoalsPage() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Gold目標（期待以上）
+                {!canEditGold && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
               </label>
               <input
                 type="text"
                 value={goldDesc}
                 onChange={e => setGoldDesc(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!canEditGold}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  !canEditGold ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                }`}
                 placeholder="例: リファクタリングまで完了させる"
               />
               <p className="text-xs text-slate-500 mt-1">
@@ -152,5 +212,16 @@ export default function GoalsPage() {
   );
 }
 
-
-
+export default function GoalsPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout pageTitle="目標編集">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-slate-600">読み込み中...</p>
+        </div>
+      </AppLayout>
+    }>
+      <GoalsPageContent />
+    </Suspense>
+  );
+}
