@@ -89,6 +89,7 @@ export type TransitionType = 'level_up' | 'level_down' | null;
 export interface GoalCard {
   id: string;
   level: GoalLevel;
+  levelNumber: number; // レベル称号（Lv.1, Lv.2, ...）
   content: string;
   startDate: string; // YYYY-MM-DD
   endDate: string | null; // nullの場合は現在進行中

@@ -6,9 +6,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  getDailyRecordByDate,
-  createDailyRecord
-} from '@/lib/db';
+  getDailyRecordByDateAction,
+  createDailyRecordAction
+} from '@/lib/actions';
 import { formatDate, getLevelBadgeClass } from '@/lib/utils';
 import type { AchievementLevel } from '@/types';
 
@@ -27,7 +27,7 @@ export default function RecordPage() {
     async function loadData() {
       try {
         // 今日の記録が既にあるかチェック
-        const existingRecord = await getDailyRecordByDate(today);
+        const existingRecord = await getDailyRecordByDateAction(today);
         if (existingRecord) {
           // 既に記録がある場合は日詳細ページへリダイレクト
           router.push(`/day/${today}`);
@@ -53,7 +53,7 @@ export default function RecordPage() {
 
     try {
       // 日次記録を作成
-      await createDailyRecord({
+      await createDailyRecordAction({
         date: today,
         achievementLevel,
         doText: learningContent.trim() || 'なし',

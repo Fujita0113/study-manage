@@ -5,7 +5,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getGoals, updateGoal, createGoalHistorySlot } from '@/lib/db';
+import { getGoalsAction, updateGoalAction, createGoalHistorySlotAction } from '@/lib/actions';
 import type { Goal, GoalLevel, GoalChangeReason } from '@/types';
 
 function GoalsPageContent() {
@@ -28,7 +28,7 @@ function GoalsPageContent() {
   useEffect(() => {
     async function loadGoals() {
       try {
-        const fetchedGoals = await getGoals();
+        const fetchedGoals = await getGoalsAction();
         setGoals(fetchedGoals);
 
         const bronzeGoal = fetchedGoals.find(g => g.level === 'bronze');
@@ -58,13 +58,13 @@ function GoalsPageContent() {
 
     try {
       // 1. Goalテーブルを更新
-      await updateGoal('bronze', bronzeDesc.trim());
-      await updateGoal('silver', silverDesc.trim());
-      await updateGoal('gold', goldDesc.trim());
+      await updateGoalAction('bronze', bronzeDesc.trim());
+      await updateGoalAction('silver', silverDesc.trim());
+      await updateGoalAction('gold', goldDesc.trim());
 
       // 2. 新しい目標履歴スロットを作成
       const changeReason = determineChangeReason(editParam);
-      await createGoalHistorySlot(
+      await createGoalHistorySlotAction(
         bronzeDesc.trim(),
         silverDesc.trim(),
         goldDesc.trim(),

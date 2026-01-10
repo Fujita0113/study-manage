@@ -1,17 +1,9 @@
 /**
  * Database access functions
- * For now, these return mock data
- * Later, these will be replaced with actual Prisma queries
+ * Using Supabase for data persistence
  */
 
-import {
-  mockUserSettings,
-  mockGoals,
-  mockDailyRecords,
-  mockStreak,
-  mockGoalHistorySlots,
-  MOCK_USER_ID,
-} from './mockData';
+import { createClient } from '@/lib/supabase/server';
 import {
   UserSettings,
   Goal,
@@ -23,108 +15,346 @@ import {
   GoalChangeReason,
 } from '@/types';
 
+// デバッグ用: ユーザーIDを固定
+const DEFAULT_USER_ID = 'test-user-001';
+
 // ==================== User Settings ====================
 
-export async function getUserSettings(userId: string = MOCK_USER_ID): Promise<UserSettings> {
-  return mockUserSettings;
+export async function getUserSettings(userId: string = DEFAULT_USER_ID): Promise<UserSettings> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('User settings not found');
+
+  return {
+    id: data.id,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 export async function updateUserSettings(
-  userId: string = MOCK_USER_ID,
-  data: Partial<UserSettings>
+  userId: string = DEFAULT_USER_ID,
+  updates: Partial<UserSettings>
 ): Promise<UserSettings> {
-  return { ...mockUserSettings, ...data };
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update({
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Failed to update user settings');
+
+  return {
+    id: data.id,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 // ==================== Goals ====================
 
-export async function getGoals(userId: string = MOCK_USER_ID): Promise<Goal[]> {
-  return mockGoals;
+export async function getGoals(userId: string = DEFAULT_USER_ID): Promise<Goal[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('level', { ascending: true });
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return data.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    level: row.level as GoalLevel,
+    description: row.description,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }));
 }
 
 export async function getGoalByLevel(
   level: GoalLevel,
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<Goal | null> {
-  return mockGoals.find((g) => g.level === level) || null;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('level', level)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    level: data.level as GoalLevel,
+    description: data.description,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 export async function updateGoal(
   level: GoalLevel,
   description: string,
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<Goal> {
-  const goal = mockGoals.find((g) => g.level === level);
-  if (!goal) throw new Error(`Goal not found: ${level}`);
-  return { ...goal, description, updatedAt: new Date() };
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .update({
+      description,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .eq('level', level)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error(`Goal not found: ${level}`);
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    level: data.level as GoalLevel,
+    description: data.description,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 // ==================== Daily Records ====================
 
 export async function getDailyRecords(
-  userId: string = MOCK_USER_ID,
+  userId: string = DEFAULT_USER_ID,
   options?: { startDate?: string; endDate?: string }
 ): Promise<DailyRecord[]> {
-  let records = mockDailyRecords;
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('daily_records')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
 
   if (options?.startDate) {
-    records = records.filter((r) => r.date >= options.startDate!);
+    query = query.gte('date', options.startDate);
   }
 
   if (options?.endDate) {
-    records = records.filter((r) => r.date <= options.endDate!);
+    query = query.lte('date', options.endDate);
   }
 
-  return records.sort((a, b) => b.date.localeCompare(a.date));
+  const { data, error } = await query;
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return data.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    achievementLevel: row.achievement_level,
+    doText: row.do_text || undefined,
+    journalText: row.journal_text || undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }));
 }
 
 export async function getDailyRecordByDate(
   date: string,
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<DailyRecord | null> {
-  return mockDailyRecords.find((r) => r.date === date) || null;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('daily_records')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    date: data.date,
+    achievementLevel: data.achievement_level,
+    doText: data.do_text || undefined,
+    journalText: data.journal_text || undefined,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 export async function createDailyRecord(
-  data: Omit<DailyRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
-  userId: string = MOCK_USER_ID
+  recordData: Omit<DailyRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
+  userId: string = DEFAULT_USER_ID
 ): Promise<DailyRecord> {
-  const newRecord: DailyRecord = {
-    ...data,
-    id: `record-${Date.now()}`,
-    userId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('daily_records')
+    .insert({
+      user_id: userId,
+      date: recordData.date,
+      achievement_level: recordData.achievementLevel,
+      do_text: recordData.doText || null,
+      journal_text: recordData.journalText || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Failed to create daily record');
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    date: data.date,
+    achievementLevel: data.achievement_level,
+    doText: data.do_text || undefined,
+    journalText: data.journal_text || undefined,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
   };
-  return newRecord;
 }
 
 export async function updateDailyRecord(
   recordId: string,
-  data: Partial<DailyRecord>
+  updates: Partial<DailyRecord>
 ): Promise<DailyRecord> {
-  const record = mockDailyRecords.find((r) => r.id === recordId);
-  if (!record) throw new Error(`Daily record not found: ${recordId}`);
-  return { ...record, ...data, updatedAt: new Date() };
+  const supabase = await createClient();
+
+  const updateData: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.achievementLevel !== undefined) {
+    updateData.achievement_level = updates.achievementLevel;
+  }
+  if (updates.doText !== undefined) {
+    updateData.do_text = updates.doText || null;
+  }
+  if (updates.journalText !== undefined) {
+    updateData.journal_text = updates.journalText || null;
+  }
+
+  const { data, error } = await supabase
+    .from('daily_records')
+    .update(updateData)
+    .eq('id', recordId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error(`Daily record not found: ${recordId}`);
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    date: data.date,
+    achievementLevel: data.achievement_level,
+    doText: data.do_text || undefined,
+    journalText: data.journal_text || undefined,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 // ==================== Streak ====================
 
-export async function getStreak(userId: string = MOCK_USER_ID): Promise<Streak> {
-  return mockStreak;
+export async function getStreak(userId: string = DEFAULT_USER_ID): Promise<Streak> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('streaks')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Streak not found');
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    currentStreak: data.current_streak,
+    longestStreak: data.longest_streak,
+    lastRecordedDate: data.last_recorded_date || undefined,
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 export async function updateStreak(
-  userId: string = MOCK_USER_ID,
-  data: Partial<Streak>
+  userId: string = DEFAULT_USER_ID,
+  updates: Partial<Streak>
 ): Promise<Streak> {
-  return { ...mockStreak, ...data, updatedAt: new Date() };
+  const supabase = await createClient();
+
+  const updateData: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.currentStreak !== undefined) {
+    updateData.current_streak = updates.currentStreak;
+  }
+  if (updates.longestStreak !== undefined) {
+    updateData.longest_streak = updates.longestStreak;
+  }
+  if (updates.lastRecordedDate !== undefined) {
+    updateData.last_recorded_date = updates.lastRecordedDate || null;
+  }
+
+  const { data, error } = await supabase
+    .from('streaks')
+    .update(updateData)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Failed to update streak');
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    currentStreak: data.current_streak,
+    longestStreak: data.longest_streak,
+    lastRecordedDate: data.last_recorded_date || undefined,
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 // ==================== Suggestions ====================
 
 export async function getSuggestion(
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<Suggestion | null> {
   // Check for level up suggestion (14 consecutive days at same level)
   const records = await getDailyRecords(userId);
@@ -183,21 +413,63 @@ export async function getSuggestion(
  * 目標履歴スロットを全て取得（新しい順）
  */
 export async function getGoalHistorySlots(
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<GoalHistorySlot[]> {
-  return mockGoalHistorySlots.sort((a, b) =>
-    b.startDate.localeCompare(a.startDate)
-  );
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goal_history')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false });
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return data.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    bronzeGoal: row.bronze_goal,
+    silverGoal: row.silver_goal,
+    goldGoal: row.gold_goal,
+    startDate: row.start_date,
+    endDate: row.end_date || undefined,
+    changeReason: row.change_reason as GoalChangeReason,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }));
 }
 
 /**
  * 現在進行中のスロットを取得
  */
 export async function getCurrentGoalSlot(
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<GoalHistorySlot | null> {
-  const slots = await getGoalHistorySlots(userId);
-  return slots.find(slot => !slot.endDate) || null;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goal_history')
+    .select('*')
+    .eq('user_id', userId)
+    .is('end_date', null)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    bronzeGoal: data.bronze_goal,
+    silverGoal: data.silver_goal,
+    goldGoal: data.gold_goal,
+    startDate: data.start_date,
+    endDate: data.end_date || undefined,
+    changeReason: data.change_reason as GoalChangeReason,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 /**
@@ -209,8 +481,10 @@ export async function createGoalHistorySlot(
   silverGoal: string,
   goldGoal: string,
   changeReason: GoalChangeReason,
-  userId: string = MOCK_USER_ID
+  userId: string = DEFAULT_USER_ID
 ): Promise<GoalHistorySlot> {
+  const supabase = await createClient();
+
   // 1. 現在進行中のスロットを終了させる
   const currentSlot = await getCurrentGoalSlot(userId);
   if (currentSlot) {
@@ -219,22 +493,36 @@ export async function createGoalHistorySlot(
 
   // 2. 新しいスロットを作成
   const today = new Date().toISOString().split('T')[0];
-  const newSlot: GoalHistorySlot = {
-    id: `slot-${Date.now()}`,
-    userId,
-    bronzeGoal,
-    silverGoal,
-    goldGoal,
-    startDate: today,
-    endDate: undefined,
-    changeReason,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
 
-  // TODO: Supabase insert
-  mockGoalHistorySlots.push(newSlot);
-  return newSlot;
+  const { data, error } = await supabase
+    .from('goal_history')
+    .insert({
+      user_id: userId,
+      bronze_goal: bronzeGoal,
+      silver_goal: silverGoal,
+      gold_goal: goldGoal,
+      start_date: today,
+      end_date: null,
+      change_reason: changeReason,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Failed to create goal history slot');
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    bronzeGoal: data.bronze_goal,
+    silverGoal: data.silver_goal,
+    goldGoal: data.gold_goal,
+    startDate: data.start_date,
+    endDate: data.end_date || undefined,
+    changeReason: data.change_reason as GoalChangeReason,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }
 
 /**
@@ -243,16 +531,35 @@ export async function createGoalHistorySlot(
 export async function endGoalHistorySlot(
   slotId: string
 ): Promise<GoalHistorySlot> {
+  const supabase = await createClient();
+
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const endDate = yesterday.toISOString().split('T')[0];
 
-  // TODO: Supabase update
-  const slot = mockGoalHistorySlots.find(s => s.id === slotId);
-  if (slot) {
-    slot.endDate = endDate;
-    slot.updatedAt = new Date();
-  }
+  const { data, error } = await supabase
+    .from('goal_history')
+    .update({
+      end_date: endDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', slotId)
+    .select()
+    .single();
 
-  return slot as GoalHistorySlot;
+  if (error) throw error;
+  if (!data) throw new Error(`Goal history slot not found: ${slotId}`);
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    bronzeGoal: data.bronze_goal,
+    silverGoal: data.silver_goal,
+    goldGoal: data.gold_goal,
+    startDate: data.start_date,
+    endDate: data.end_date || undefined,
+    changeReason: data.change_reason as GoalChangeReason,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }

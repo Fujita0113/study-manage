@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GoalCard as GoalCardType, GoalHistory } from '@/types';
 import { GoalCard } from './GoalCard';
 import { TransitionArrow } from './TransitionArrow';
@@ -83,7 +83,7 @@ function renderCardLane(
   cards: GoalCardType[],
   baseDate: string,
   laneLabel: string
-): JSX.Element {
+): React.ReactElement {
   return (
     <div className="relative" style={{ height: `${CARD_HEIGHT}px` }}>
       {/* レーンラベル */}
