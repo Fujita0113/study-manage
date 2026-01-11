@@ -23,7 +23,7 @@ import {
   GoalChangeReason,
   AchievementLevel,
 } from '@/types';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
 
 // ==================== Supabase型定義 ====================

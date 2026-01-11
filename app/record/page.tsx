@@ -5,10 +5,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getDailyRecordByDate,
-  createDailyRecord
-} from '@/lib/db';
+import type { DailyRecord } from '@/types';
 import { formatDate, getLevelBadgeClass } from '@/lib/utils';
 import type { AchievementLevel } from '@/types';
 
@@ -27,7 +24,12 @@ export default function RecordPage() {
     async function loadData() {
       try {
         // 今日の記録が既にあるかチェック
-        const existingRecord = await getDailyRecordByDate(today);
+        const response = await fetch(`/api/daily-records?date=${today}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch daily record');
+        }
+
+        const existingRecord: DailyRecord | null = await response.json();
         if (existingRecord) {
           // 既に記録がある場合は日詳細ページへリダイレクト
           router.push(`/day/${today}`);
@@ -52,13 +54,23 @@ export default function RecordPage() {
     }
 
     try {
-      // 日次記録を作成
-      await createDailyRecord({
-        date: today,
-        achievementLevel,
-        doText: learningContent.trim() || 'なし',
-        journalText: journal || undefined,
+      // 日次記録を作成（API経由）
+      const response = await fetch('/api/daily-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: today,
+          achievementLevel,
+          doText: learningContent.trim() || 'なし',
+          journalText: journal || undefined,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create daily record');
+      }
 
       // ホーム画面へ遷移
       router.push('/');
