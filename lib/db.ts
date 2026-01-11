@@ -21,7 +21,33 @@ import {
   Suggestion,
   GoalHistorySlot,
   GoalChangeReason,
+  AchievementLevel,
 } from '@/types';
+import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/lib/supabase/types';
+
+// ==================== Supabase型定義 ====================
+
+// Supabaseのdaily_recordsテーブルの型
+type DailyRecordRow = Database['public']['Tables']['daily_records']['Row'];
+
+// ==================== 型変換ヘルパー関数 ====================
+
+/**
+ * Supabaseのsnake_case形式をTypeScriptのcamelCase形式に変換
+ */
+function toDailyRecord(dbRecord: DailyRecordRow): DailyRecord {
+  return {
+    id: dbRecord.id,
+    userId: dbRecord.user_id,
+    date: dbRecord.date,
+    achievementLevel: dbRecord.achievement_level as AchievementLevel,
+    doText: dbRecord.do_text || undefined,
+    journalText: dbRecord.journal_text || undefined,
+    createdAt: new Date(dbRecord.created_at),
+    updatedAt: new Date(dbRecord.updated_at),
+  };
+}
 
 // ==================== User Settings ====================
 
@@ -65,17 +91,37 @@ export async function getDailyRecords(
   userId: string = MOCK_USER_ID,
   options?: { startDate?: string; endDate?: string }
 ): Promise<DailyRecord[]> {
-  let records = mockDailyRecords;
+  const supabase = await createClient();
 
+  // 基本クエリ: user_idで絞り込み
+  let query = supabase
+    .from('daily_records')
+    .select('*')
+    .eq('user_id', userId);
+
+  // 日付範囲フィルタ
   if (options?.startDate) {
-    records = records.filter((r) => r.date >= options.startDate!);
+    query = query.gte('date', options.startDate);
   }
 
   if (options?.endDate) {
-    records = records.filter((r) => r.date <= options.endDate!);
+    query = query.lte('date', options.endDate);
   }
 
-  return records.sort((a, b) => b.date.localeCompare(a.date));
+  // 新しい順にソート
+  query = query.order('date', { ascending: false });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch daily records:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    console.error('Options:', options);
+    return [];
+  }
+
+  return (data || []).map(toDailyRecord);
 }
 
 export async function getDailyRecordByDate(

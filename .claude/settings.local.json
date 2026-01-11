@@ -5,7 +5,10 @@
       "Bash(npm install:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx tsx:*)",
+      "Bash(if exist .next rmdir /s /q .next)"
     ]
   }
 }

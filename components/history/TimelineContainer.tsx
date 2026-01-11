@@ -83,7 +83,7 @@ function renderCardLane(
   cards: GoalCardType[],
   baseDate: string,
   laneLabel: string
-): JSX.Element {
+): React.JSX.Element {
   return (
     <div className="relative" style={{ height: `${CARD_HEIGHT}px` }}>
       {/* レーンラベル */}

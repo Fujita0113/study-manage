@@ -16,8 +16,8 @@ function getDateString(daysAgo: number): string {
   return date.toISOString().split('T')[0];
 }
 
-// Mock User ID
-export const MOCK_USER_ID = 'mock-user-001';
+// Mock User ID (Supabaseで使用しているUUID)
+export const MOCK_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 // Mock User Settings
 export const mockUserSettings: UserSettings = {
