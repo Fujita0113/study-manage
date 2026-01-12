@@ -30,6 +30,7 @@ import type { Database } from '@/lib/supabase/types';
 
 // Supabaseのdaily_recordsテーブルの型
 type DailyRecordRow = Database['public']['Tables']['daily_records']['Row'];
+type DailyRecordInsert = Database['public']['Tables']['daily_records']['Insert'];
 
 // ==================== 型変換ヘルパー関数 ====================
 
@@ -155,7 +156,7 @@ export async function createDailyRecord(
   const supabase = await createClient();
 
   // TypeScriptのcamelCaseをSupabaseのsnake_caseに変換
-  const insertData = {
+  const insertData: DailyRecordInsert = {
     user_id: userId,
     date: data.date,
     achievement_level: data.achievementLevel,
@@ -163,8 +164,8 @@ export async function createDailyRecord(
     journal_text: data.journalText || null,
   };
 
-  const { data: inserted, error } = await supabase
-    .from('daily_records')
+  const query = supabase.from('daily_records');
+  const { data: inserted, error } = await (query as any)
     .insert(insertData)
     .select()
     .single();
