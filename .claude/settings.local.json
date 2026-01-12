@@ -9,7 +9,9 @@
       "Bash(mkdir:*)",
       "Bash(npx tsx:*)",
       "Bash(if exist .next rmdir /s /q .next)",
-      "Bash(timeout 15 cmd:*)"
+      "Bash(timeout 15 cmd:*)",
+      "Bash(npx supabase:*)",
+      "Bash(del test-db.ts)"
     ]
   }
 }

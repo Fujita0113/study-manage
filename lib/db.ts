@@ -207,13 +207,13 @@ export async function updateStreak(
 export async function getSuggestion(
   userId: string = MOCK_USER_ID
 ): Promise<Suggestion | null> {
-  // Check for level up suggestion (14 consecutive days at same level)
+  // Check for level up suggestion (14 consecutive days at or above each level)
   const records = await getDailyRecords(userId);
   const recentRecords = records.slice(0, 14);
 
-  // Check Gold level up
-  const allGold = recentRecords.every((r) => r.achievementLevel === 'gold');
-  if (allGold && recentRecords.length === 14) {
+  // Check Gold level up (Gold以上を14日連続)
+  const allGoldOrAbove = recentRecords.every((r) => r.achievementLevel === 'gold');
+  if (allGoldOrAbove && recentRecords.length === 14) {
     return {
       type: 'level_up',
       message: 'Goldレベルを14日連続達成しました！目標をレベルアップしませんか？',
@@ -222,9 +222,11 @@ export async function getSuggestion(
     };
   }
 
-  // Check Silver level up
-  const allSilver = recentRecords.every((r) => r.achievementLevel === 'silver');
-  if (allSilver && recentRecords.length === 14) {
+  // Check Silver level up (Silver以上を14日連続 = Silver or Gold)
+  const allSilverOrAbove = recentRecords.every((r) =>
+    r.achievementLevel === 'silver' || r.achievementLevel === 'gold'
+  );
+  if (allSilverOrAbove && recentRecords.length === 14) {
     return {
       type: 'level_up',
       message: 'Silverレベルを14日連続達成しました！目標をレベルアップしませんか？',
@@ -233,9 +235,13 @@ export async function getSuggestion(
     };
   }
 
-  // Check Bronze level up
-  const allBronze = recentRecords.every((r) => r.achievementLevel === 'bronze');
-  if (allBronze && recentRecords.length === 14) {
+  // Check Bronze level up (Bronze以上を14日連続 = Bronze or Silver or Gold)
+  const allBronzeOrAbove = recentRecords.every((r) =>
+    r.achievementLevel === 'bronze' ||
+    r.achievementLevel === 'silver' ||
+    r.achievementLevel === 'gold'
+  );
+  if (allBronzeOrAbove && recentRecords.length === 14) {
     return {
       type: 'level_up',
       message: 'Bronzeレベルを14日連続達成しました！目標をレベルアップしませんか？',
