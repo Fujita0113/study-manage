@@ -98,7 +98,7 @@ export default function RecordPage() {
           <h2 className="text-xl font-semibold text-slate-800 mb-4">学習内容サマリー</h2>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              今日は何を学びましたか？（必須）
+              今日は何を達成しましたか？（必須）
             </label>
             <textarea
               value={learningContent}

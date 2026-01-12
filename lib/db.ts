@@ -128,21 +128,55 @@ export async function getDailyRecordByDate(
   date: string,
   userId: string = MOCK_USER_ID
 ): Promise<DailyRecord | null> {
-  return mockDailyRecords.find((r) => r.date === date) || null;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('daily_records')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle(); // 0件または1件を取得
+
+  if (error) {
+    console.error('Failed to fetch daily record by date:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    console.error('Date:', date);
+    return null;
+  }
+
+  return data ? toDailyRecord(data) : null;
 }
 
 export async function createDailyRecord(
   data: Omit<DailyRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
   userId: string = MOCK_USER_ID
 ): Promise<DailyRecord> {
-  const newRecord: DailyRecord = {
-    ...data,
-    id: `record-${Date.now()}`,
-    userId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  const supabase = await createClient();
+
+  // TypeScriptのcamelCaseをSupabaseのsnake_caseに変換
+  const insertData = {
+    user_id: userId,
+    date: data.date,
+    achievement_level: data.achievementLevel,
+    do_text: data.doText || null,
+    journal_text: data.journalText || null,
   };
-  return newRecord;
+
+  const { data: inserted, error } = await supabase
+    .from('daily_records')
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create daily record:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Insert data:', insertData);
+    throw new Error(`Failed to create daily record: ${error.message}`);
+  }
+
+  return toDailyRecord(inserted);
 }
 
 export async function updateDailyRecord(
