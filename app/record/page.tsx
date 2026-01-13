@@ -5,7 +5,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { DailyRecord } from '@/types';
+import type { DailyRecord, Goal } from '@/types';
 import { formatDate, getLevelBadgeClass } from '@/lib/utils';
 import type { AchievementLevel } from '@/types';
 
@@ -18,6 +18,15 @@ export default function RecordPage() {
   const [learningContent, setLearningContent] = useState(''); // 学習内容サマリー
   const [journal, setJournal] = useState('');
   const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState<{
+    bronze: string;
+    silver: string;
+    gold: string;
+  }>({
+    bronze: '30分だけ座る', // デフォルト値（目標未設定時用）
+    silver: '1機能完成',
+    gold: 'リファクタまで完了'
+  });
 
   // 初期データ取得
   useEffect(() => {
@@ -34,6 +43,24 @@ export default function RecordPage() {
           // 既に記録がある場合は日詳細ページへリダイレクト
           router.push(`/day/${today}`);
           return;
+        }
+
+        // 目標データを取得
+        const goalsResponse = await fetch('/api/goals');
+        if (goalsResponse.ok) {
+          const goalsData: Goal[] = await goalsResponse.json();
+
+          // 配列をオブジェクト形式に変換
+          const goalsMap = goalsData.reduce((acc, goal) => {
+            acc[goal.level] = goal;
+            return acc;
+          }, {} as Record<string, Goal>);
+
+          setGoals({
+            bronze: goalsMap.bronze?.description || '30分だけ座る',
+            silver: goalsMap.silver?.description || '1機能完成',
+            gold: goalsMap.gold?.description || 'リファクタまで完了'
+          });
         }
 
         setLoading(false);
@@ -119,9 +146,9 @@ export default function RecordPage() {
           <div className="grid grid-cols-3 gap-4">
             {(['bronze', 'silver', 'gold'] as const).map(level => {
               const labels = {
-                bronze: { main: '最低限', example: '30分だけ座る' },
-                silver: { main: '計画通り', example: '1機能完成' },
-                gold: { main: '期待以上', example: 'リファクタまで完了' }
+                bronze: { main: '最低限', example: goals.bronze },
+                silver: { main: '計画通り', example: goals.silver },
+                gold: { main: '期待以上', example: goals.gold }
               };
 
               return (
