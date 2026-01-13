@@ -6,10 +6,8 @@
 
 import {
   mockUserSettings,
-  mockGoals,
   mockDailyRecords,
   mockStreak,
-  mockGoalHistorySlots,
   MOCK_USER_ID,
 } from './mockData';
 import {
@@ -32,6 +30,16 @@ import type { Database } from '@/lib/supabase/types';
 type DailyRecordRow = Database['public']['Tables']['daily_records']['Row'];
 type DailyRecordInsert = Database['public']['Tables']['daily_records']['Insert'];
 
+// Supabaseのgoalsテーブルの型
+type GoalRow = Database['public']['Tables']['goals']['Row'];
+type GoalInsert = Database['public']['Tables']['goals']['Insert'];
+type GoalUpdate = Database['public']['Tables']['goals']['Update'];
+
+// Supabaseのgoal_history_slotsテーブルの型
+type GoalHistorySlotRow = Database['public']['Tables']['goal_history_slots']['Row'];
+type GoalHistorySlotInsert = Database['public']['Tables']['goal_history_slots']['Insert'];
+type GoalHistorySlotUpdate = Database['public']['Tables']['goal_history_slots']['Update'];
+
 // ==================== 型変換ヘルパー関数 ====================
 
 /**
@@ -47,6 +55,38 @@ function toDailyRecord(dbRecord: DailyRecordRow): DailyRecord {
     journalText: dbRecord.journal_text || undefined,
     createdAt: new Date(dbRecord.created_at),
     updatedAt: new Date(dbRecord.updated_at),
+  };
+}
+
+/**
+ * Supabaseのgoalsテーブル形式をTypeScript型に変換
+ */
+function toGoal(dbGoal: GoalRow): Goal {
+  return {
+    id: dbGoal.id,
+    userId: dbGoal.user_id,
+    level: dbGoal.level as GoalLevel,
+    description: dbGoal.description,
+    createdAt: new Date(dbGoal.created_at),
+    updatedAt: new Date(dbGoal.updated_at),
+  };
+}
+
+/**
+ * Supabaseのgoal_history_slotsテーブル形式をTypeScript型に変換
+ */
+function toGoalHistorySlot(dbSlot: GoalHistorySlotRow): GoalHistorySlot {
+  return {
+    id: dbSlot.id,
+    userId: dbSlot.user_id,
+    bronzeGoal: dbSlot.bronze_goal,
+    silverGoal: dbSlot.silver_goal,
+    goldGoal: dbSlot.gold_goal,
+    startDate: dbSlot.start_date,
+    endDate: dbSlot.end_date || undefined,
+    changeReason: dbSlot.change_reason as GoalChangeReason,
+    createdAt: new Date(dbSlot.created_at),
+    updatedAt: new Date(dbSlot.updated_at),
   };
 }
 
@@ -66,14 +106,46 @@ export async function updateUserSettings(
 // ==================== Goals ====================
 
 export async function getGoals(userId: string = MOCK_USER_ID): Promise<Goal[]> {
-  return mockGoals;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('level', { ascending: true }); // bronze, silver, gold の順
+
+  if (error) {
+    console.error('Failed to fetch goals:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    return [];
+  }
+
+  return (data || []).map(toGoal);
 }
 
 export async function getGoalByLevel(
   level: GoalLevel,
   userId: string = MOCK_USER_ID
 ): Promise<Goal | null> {
-  return mockGoals.find((g) => g.level === level) || null;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('level', level)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to fetch goal by level:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    console.error('Level:', level);
+    return null;
+  }
+
+  return data ? toGoal(data) : null;
 }
 
 export async function updateGoal(
@@ -81,9 +153,31 @@ export async function updateGoal(
   description: string,
   userId: string = MOCK_USER_ID
 ): Promise<Goal> {
-  const goal = mockGoals.find((g) => g.level === level);
-  if (!goal) throw new Error(`Goal not found: ${level}`);
-  return { ...goal, description, updatedAt: new Date() };
+  const supabase = await createClient();
+
+  const updateData: GoalUpdate = {
+    description,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('goals')
+    .update(updateData)
+    .eq('user_id', userId)
+    .eq('level', level)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update goal:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    console.error('Level:', level);
+    console.error('Description:', description);
+    throw new Error(`Failed to update goal: ${error.message}`);
+  }
+
+  return toGoal(data);
 }
 
 // ==================== Daily Records ====================
@@ -272,9 +366,22 @@ export async function getSuggestion(
 export async function getGoalHistorySlots(
   userId: string = MOCK_USER_ID
 ): Promise<GoalHistorySlot[]> {
-  return mockGoalHistorySlots.sort((a, b) =>
-    b.startDate.localeCompare(a.startDate)
-  );
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goal_history_slots')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false }); // 新しい順
+
+  if (error) {
+    console.error('Failed to fetch goal history slots:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    return [];
+  }
+
+  return (data || []).map(toGoalHistorySlot);
 }
 
 /**
@@ -290,6 +397,8 @@ export async function getCurrentGoalSlot(
 /**
  * 新しい目標履歴スロットを作成
  * 同時に、現在進行中のスロットを終了させる
+ *
+ * 注意: 今日すでにスロットが作成されている場合は、既存スロットを更新する
  */
 export async function createGoalHistorySlot(
   bronzeGoal: string,
@@ -298,30 +407,70 @@ export async function createGoalHistorySlot(
   changeReason: GoalChangeReason,
   userId: string = MOCK_USER_ID
 ): Promise<GoalHistorySlot> {
-  // 1. 現在進行中のスロットを終了させる
+  const supabase = await createClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1. 現在進行中のスロットを取得
   const currentSlot = await getCurrentGoalSlot(userId);
+
+  // 2. 今日すでにスロットが作成されている場合は、既存スロットを更新
+  if (currentSlot && currentSlot.startDate === today) {
+    console.log('Updating existing slot created today:', currentSlot.id);
+
+    const updateData: GoalHistorySlotUpdate = {
+      bronze_goal: bronzeGoal,
+      silver_goal: silverGoal,
+      gold_goal: goldGoal,
+      change_reason: changeReason,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('goal_history_slots')
+      .update(updateData)
+      .eq('id', currentSlot.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to update goal history slot:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw new Error(`Failed to update goal history slot: ${error.message}`);
+    }
+
+    return toGoalHistorySlot(data);
+  }
+
+  // 3. 既存のスロットを終了させる（今日作成されたものでない場合）
   if (currentSlot) {
     await endGoalHistorySlot(currentSlot.id);
   }
 
-  // 2. 新しいスロットを作成
-  const today = new Date().toISOString().split('T')[0];
-  const newSlot: GoalHistorySlot = {
-    id: `slot-${Date.now()}`,
-    userId,
-    bronzeGoal,
-    silverGoal,
-    goldGoal,
-    startDate: today,
-    endDate: undefined,
-    changeReason,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  // 4. 新しいスロットを作成
+  const insertData: GoalHistorySlotInsert = {
+    user_id: userId,
+    bronze_goal: bronzeGoal,
+    silver_goal: silverGoal,
+    gold_goal: goldGoal,
+    start_date: today,
+    end_date: null,
+    change_reason: changeReason,
   };
 
-  // TODO: Supabase insert
-  mockGoalHistorySlots.push(newSlot);
-  return newSlot;
+  const { data, error } = await supabase
+    .from('goal_history_slots')
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create goal history slot:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Insert data:', insertData);
+    throw new Error(`Failed to create goal history slot: ${error.message}`);
+  }
+
+  return toGoalHistorySlot(data);
 }
 
 /**
@@ -330,16 +479,31 @@ export async function createGoalHistorySlot(
 export async function endGoalHistorySlot(
   slotId: string
 ): Promise<GoalHistorySlot> {
+  const supabase = await createClient();
+
+  // 昨日の日付をend_dateに設定（新しいスロットは今日から始まるため）
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const endDate = yesterday.toISOString().split('T')[0];
 
-  // TODO: Supabase update
-  const slot = mockGoalHistorySlots.find(s => s.id === slotId);
-  if (slot) {
-    slot.endDate = endDate;
-    slot.updatedAt = new Date();
+  const updateData: GoalHistorySlotUpdate = {
+    end_date: endDate,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('goal_history_slots')
+    .update(updateData)
+    .eq('id', slotId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to end goal history slot:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Slot ID:', slotId);
+    throw new Error(`Failed to end goal history slot: ${error.message}`);
   }
 
-  return slot as GoalHistorySlot;
+  return toGoalHistorySlot(data);
 }
