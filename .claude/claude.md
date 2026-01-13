@@ -182,3 +182,11 @@ requirements.mdを更新
 - requirements.mdに記載されていない詳細仕様については、既存のコードを参照するか、ユーザーに確認してください
 - データモデルの詳細は[docs/data-model.md](docs/data-model.md)を参照してください
 - コードの一貫性を保つため、既存のコーディングスタイルに従ってください
+
+### Supabaseコマンドの実行方法
+
+- `npx supabase` コマンドは**プロジェクトルートから直接実行すること**
+- `cd supabase` でディレクトリ移動する必要はありません
+- 例：
+  - ✅ 正しい: `npx supabase db push`
+  - ❌ 間違い: `cd supabase && npx supabase db push`

@@ -11,7 +11,9 @@
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(timeout 15 cmd:*)",
       "Bash(npx supabase:*)",
-      "Bash(del test-db.ts)"
+      "Bash(del test-db.ts)",
+      "Bash(if not exist \"app\\\\api\\\\suggestions\\\\display\" mkdir \"app\\\\api\\\\suggestions\\\\display\")",
+      "Bash(if exist \"app\\\\api\\\\suggestions\\\\display\\\\route.ts\" del \"app\\\\api\\\\suggestions\\\\display\\\\route.ts\")"
     ]
   }
 }

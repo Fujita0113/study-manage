@@ -131,7 +131,51 @@ interface DailyRecord {
 
 ---
 
-### 4. Streak（ストリーク情報）
+### 4. SuggestionDisplayLog（提案バナー表示履歴）
+
+提案バナーの表示履歴を記録し、同日の重複表示を防ぎます。
+
+#### TypeScript型定義
+
+```typescript
+type SuggestionType = 'level_up' | 'level_down';
+
+interface SuggestionDisplayLog {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  suggestion_type: SuggestionType; // 提案種別
+  target_level?: GoalLevel;      // 対象レベル（level_upの場合のみ）
+  display_date: string;          // 表示日（YYYY-MM-DD形式）
+  created_at: Date;              // 記録作成日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `suggestion_type` | SuggestionType | ✓ | - | 'level_up', 'level_down' のいずれか |
+| `target_level` | GoalLevel | - | null | 'bronze', 'silver', 'gold' のいずれか（level_upの場合のみ） |
+| `display_date` | string | ✓ | - | YYYY-MM-DD形式 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+
+#### 制約
+
+- UNIQUE制約: `(user_id, suggestion_type, target_level, display_date)` — 同じ日に同じ提案は1回のみ記録
+- インデックス: `(user_id, display_date)` — 検索性能向上
+
+#### 用途
+
+- 提案バナーを「その日限り」の表示にするための記録テーブル
+- 条件を満たした日に提案バナーを表示し、記録を残す
+- 同じ日に再度ページを訪れた場合、記録があれば提案バナーを表示しない
+- 日付が変わったら記録がないため、再度条件を満たせば提案バナーを表示
+
+---
+
+### 5. Streak（ストリーク情報）
 
 連続記録日数を管理します。
 
@@ -173,6 +217,7 @@ interface Streak {
 erDiagram
     User ||--o{ Goal : "has"
     User ||--o{ DailyRecord : "has"
+    User ||--o{ SuggestionDisplayLog : "has"
     User ||--|| Streak : "has"
 
     User {
@@ -202,6 +247,15 @@ erDiagram
         Date updated_at
     }
 
+    SuggestionDisplayLog {
+        string id PK
+        string user_id FK
+        SuggestionType suggestion_type
+        GoalLevel target_level
+        string display_date
+        Date created_at
+    }
+
     Streak {
         string id PK
         string user_id FK
@@ -226,6 +280,12 @@ erDiagram
 - **関係**: 1対多
 - **説明**: 1ユーザーは複数の日次記録を持つ（1日1レコード）
 - **外部キー**: `DailyRecord.user_id` → `User.id`
+- **削除時の動作**: `ON DELETE CASCADE`
+
+### User → SuggestionDisplayLog
+- **関係**: 1対多
+- **説明**: 1ユーザーは複数の提案バナー表示履歴を持つ
+- **外部キー**: `SuggestionDisplayLog.user_id` → `User.id`
 - **削除時の動作**: `ON DELETE CASCADE`
 
 ### User → Streak
@@ -298,6 +358,19 @@ CREATE TABLE daily_records (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, date)
 );
+
+-- Suggestion Display Log テーブル
+CREATE TABLE suggestion_display_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  suggestion_type TEXT NOT NULL CHECK (suggestion_type IN ('level_up', 'level_down')),
+  target_level TEXT CHECK (target_level IN ('bronze', 'silver', 'gold')),
+  display_date DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, suggestion_type, target_level, display_date)
+);
+
+CREATE INDEX idx_suggestion_display_log_user_date ON suggestion_display_log(user_id, display_date);
 
 -- Streaks テーブル
 CREATE TABLE streaks (

@@ -17,12 +17,14 @@ import {
   Streak,
   GoalLevel,
   Suggestion,
+  SuggestionType,
   GoalHistorySlot,
   GoalChangeReason,
   AchievementLevel,
 } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
+import { formatDate } from './utils';
 
 // ==================== Supabase型定義 ====================
 
@@ -322,18 +324,52 @@ export async function updateStreak(
   return { ...mockStreak, ...data, updatedAt: new Date() };
 }
 
+// ==================== Suggestion Display Log ====================
+
 // ==================== Suggestions ====================
+
+/**
+ * 指定したレベル以上の連続達成日数をカウント
+ *
+ * @param records - 新しい順に並んだ日報記録（getDailyRecords の結果）
+ * @param minLevel - 最低達成レベル ('bronze' | 'silver' | 'gold')
+ * @returns 連続達成日数
+ */
+function countConsecutiveDays(
+  records: DailyRecord[],
+  minLevel: 'bronze' | 'silver' | 'gold'
+): number {
+  let count = 0;
+
+  for (const record of records) {
+    // レベルの判定
+    const meetsLevel =
+      minLevel === 'bronze'
+        ? ['bronze', 'silver', 'gold'].includes(record.achievementLevel)
+        : minLevel === 'silver'
+        ? ['silver', 'gold'].includes(record.achievementLevel)
+        : record.achievementLevel === 'gold';
+
+    if (meetsLevel) {
+      count++;
+    } else {
+      // 連続が途切れた
+      break;
+    }
+  }
+
+  return count;
+}
 
 export async function getSuggestion(
   userId: string = MOCK_USER_ID
 ): Promise<Suggestion | null> {
-  // Check for level up suggestion (14 consecutive days at or above each level)
+  // Check for level up suggestion (exactly 14, 28, 42... consecutive days at or above each level)
   const records = await getDailyRecords(userId);
-  const recentRecords = records.slice(0, 14);
 
-  // Check Gold level up (Gold以上を14日連続)
-  const allGoldOrAbove = recentRecords.every((r) => r.achievementLevel === 'gold');
-  if (allGoldOrAbove && recentRecords.length === 14) {
+  // Check Gold level up (Gold連続日数が14の倍数かつ14日以上)
+  const goldStreak = countConsecutiveDays(records, 'gold');
+  if (goldStreak >= 14 && goldStreak % 14 === 0) {
     return {
       type: 'level_up',
       message: 'Goldレベルを14日連続達成しました！目標をレベルアップしませんか？',
@@ -342,11 +378,9 @@ export async function getSuggestion(
     };
   }
 
-  // Check Silver level up (Silver以上を14日連続 = Silver or Gold)
-  const allSilverOrAbove = recentRecords.every((r) =>
-    r.achievementLevel === 'silver' || r.achievementLevel === 'gold'
-  );
-  if (allSilverOrAbove && recentRecords.length === 14) {
+  // Check Silver level up (Silver以上連続日数が14の倍数かつ14日以上)
+  const silverStreak = countConsecutiveDays(records, 'silver');
+  if (silverStreak >= 14 && silverStreak % 14 === 0) {
     return {
       type: 'level_up',
       message: 'Silverレベルを14日連続達成しました！目標をレベルアップしませんか？',
@@ -355,13 +389,9 @@ export async function getSuggestion(
     };
   }
 
-  // Check Bronze level up (Bronze以上を14日連続 = Bronze or Silver or Gold)
-  const allBronzeOrAbove = recentRecords.every((r) =>
-    r.achievementLevel === 'bronze' ||
-    r.achievementLevel === 'silver' ||
-    r.achievementLevel === 'gold'
-  );
-  if (allBronzeOrAbove && recentRecords.length === 14) {
+  // Check Bronze level up (Bronze以上連続日数が14の倍数かつ14日以上)
+  const bronzeStreak = countConsecutiveDays(records, 'bronze');
+  if (bronzeStreak >= 14 && bronzeStreak % 14 === 0) {
     return {
       type: 'level_up',
       message: 'Bronzeレベルを14日連続達成しました！目標をレベルアップしませんか？',
