@@ -190,3 +190,119 @@ requirements.mdを更新
 - 例：
   - ✅ 正しい: `npx supabase db push`
   - ❌ 間違い: `cd supabase && npx supabase db push`
+
+### Supabase Migrationsの編集方法
+
+- **migrationsファイル（`supabase/migrations/*.sql`）を編集した場合、必ずSupabase CLIを使ってpushすること**
+- 手順：
+  1. `supabase/migrations/` 配下のSQLファイルを編集
+  2. `npx supabase db push` を実行してデータベースに反映
+- **重要**: migrationsファイルを編集しただけでは、データベースには反映されません。必ず `db push` を実行してください
+- 例：
+  ```bash
+  # migrationsファイルを編集後
+  npx supabase db push
+  ```
+
+### Next.js Server ComponentとClient Componentの使い分け（重要）
+
+このプロジェクトでは、Next.js App Routerを使用しています。**Server ComponentとClient Componentの境界を明確にする必要があります。**
+
+#### 絶対に守るべきルール
+
+1. **`lib/db.ts` の関数は絶対にClient Componentで直接使用してはいけない**
+   - `lib/db.ts` は `@/lib/supabase/server` (Server Component専用) を内部で使用している
+   - `@/lib/supabase/server` は `next/headers` を使用しており、Client Componentでは動作しない
+
+2. **Client Component (`'use client'`) でデータ取得する場合は、必ずAPI Routes経由でアクセスすること**
+   - ✅ 正しい: Client Component → API Route (`/api/*`) → `lib/db.ts`
+   - ❌ 間違い: Client Component → `lib/db.ts` 直接インポート
+
+3. **Server Componentを使用する場合は、親コンポーネントもServer Componentでなければならない**
+   - ✅ 正しい: Server Component → Server Component
+   - ❌ 間違い: Client Component → Server Component
+
+#### よくあるエラーパターンと対処法
+
+##### エラー: `You're importing a component that needs "next/headers"`
+
+**原因**: Client Componentで、Server Component専用の機能を使用している
+
+**対処法**:
+1. **データ取得をAPI Route経由に変更する**
+   - Client Componentでは `fetch('/api/...')` を使用
+   - API Route内で `lib/db.ts` の関数を呼び出す
+
+2. **または、親コンポーネントをServer Componentに変更する**
+   - `'use client'` ディレクティブを削除
+   - `useState`、`useEffect` などのReact Hooksは使用不可になる
+   - インタラクティブな機能が必要な場合は、子コンポーネントをClient Componentに分離
+
+#### 実装パターン
+
+##### パターン1: Client ComponentでAPI Routes経由でデータ取得
+
+```typescript
+// ❌ 間違い
+'use client';
+import { getGoals } from '@/lib/db'; // Server Component専用の関数を直接インポート
+
+export default function MyPage() {
+  const goals = await getGoals(); // エラー！
+}
+```
+
+```typescript
+// ✅ 正しい
+'use client';
+import { useEffect, useState } from 'react';
+
+export default function MyPage() {
+  const [goals, setGoals] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/goals')
+      .then(res => res.json())
+      .then(data => setGoals(data));
+  }, []);
+}
+```
+
+##### パターン2: Server Componentでデータ取得してClient Componentに渡す
+
+```typescript
+// ✅ 正しい
+// app/page.tsx (Server Component)
+import { getGoals } from '@/lib/db';
+import { ClientGoalsList } from './ClientGoalsList';
+
+export default async function Page() {
+  const goals = await getGoals();
+
+  return <ClientGoalsList initialGoals={goals} />;
+}
+
+// ClientGoalsList.tsx (Client Component)
+'use client';
+export function ClientGoalsList({ initialGoals }) {
+  // Client側のインタラクティブな処理
+}
+```
+
+#### トラブルシューティング
+
+コンポーネントを作成・編集する際は、以下をチェックしてください：
+
+1. **`'use client'` ディレクティブがあるか？**
+   - ある → Client Component → `lib/db.ts` を直接インポートしてはいけない
+   - ない → Server Component → `lib/db.ts` を直接使用可能
+
+2. **親コンポーネントの種類は？**
+   - Client Component → 子コンポーネントでServer Component専用機能は使えない
+   - Server Component → 子コンポーネントでもServer Component機能を使用可能
+
+3. **データ取得方法は適切か？**
+   - Client Component → API Routes経由 (`fetch('/api/...')`)
+   - Server Component → 直接 `lib/db.ts` 関数呼び出し
+
+**このルールに違反すると、`You're importing a component that needs "next/headers"` エラーが頻発します。必ず守ってください。**
