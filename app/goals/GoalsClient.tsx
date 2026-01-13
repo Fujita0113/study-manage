@@ -38,6 +38,14 @@ export function GoalsClient({ initialGoals, editParam }: GoalsClientProps) {
       return;
     }
 
+    // 編集可能な目標のリストを計算
+    const editableGoals: GoalLevel[] = [];
+    if (canEditBronze) editableGoals.push('bronze');
+    if (canEditSilver) editableGoals.push('silver');
+    if (canEditGold) editableGoals.push('gold');
+
+    console.log('Editable goals:', editableGoals);
+
     setLoading(true);
     try {
       // API Route 経由で更新
@@ -50,6 +58,7 @@ export function GoalsClient({ initialGoals, editParam }: GoalsClientProps) {
           bronze: bronzeDesc.trim(),
           silver: silverDesc.trim(),
           gold: goldDesc.trim(),
+          editableGoals,
           changeReason: determineChangeReason(editParam),
         }),
       });

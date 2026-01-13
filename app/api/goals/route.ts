@@ -27,14 +27,15 @@ export async function GET() {
  * - bronze: Bronze目標の説明
  * - silver: Silver目標の説明
  * - gold: Gold目標の説明
+ * - editableGoals: 編集可能な目標レベルのリスト
  * - changeReason: 変更理由
  */
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bronze, silver, gold, changeReason } = body;
+    const { bronze, silver, gold, editableGoals, changeReason } = body;
 
-    console.log('PUT /api/goals - Request body:', { bronze, silver, gold, changeReason });
+    console.log('PUT /api/goals - Request body:', { bronze, silver, gold, editableGoals, changeReason });
 
     // バリデーション
     if (!bronze || !silver || !gold) {
@@ -44,18 +45,59 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 1. Goalテーブルを更新
-    console.log('Updating bronze goal...');
-    await updateGoal('bronze', bronze.trim());
-    console.log('Bronze goal updated successfully');
+    if (!editableGoals || !Array.isArray(editableGoals)) {
+      return NextResponse.json(
+        { error: 'editableGoals is required and must be an array' },
+        { status: 400 }
+      );
+    }
 
-    console.log('Updating silver goal...');
-    await updateGoal('silver', silver.trim());
-    console.log('Silver goal updated successfully');
+    // 1. Goalテーブルを更新（編集可能な目標のみ）
+    const updatedGoals: string[] = [];
 
-    console.log('Updating gold goal...');
-    await updateGoal('gold', gold.trim());
-    console.log('Gold goal updated successfully');
+    if (editableGoals.includes('bronze')) {
+      console.log('Updating bronze goal...');
+      try {
+        await updateGoal('bronze', bronze.trim());
+        console.log('Bronze goal updated successfully');
+        updatedGoals.push('bronze');
+      } catch (error) {
+        console.error('Failed to update bronze goal:', error);
+        throw error;
+      }
+    } else {
+      console.log('Skipping bronze goal update (not editable)');
+    }
+
+    if (editableGoals.includes('silver')) {
+      console.log('Updating silver goal...');
+      try {
+        await updateGoal('silver', silver.trim());
+        console.log('Silver goal updated successfully');
+        updatedGoals.push('silver');
+      } catch (error) {
+        console.error('Failed to update silver goal:', error);
+        throw error;
+      }
+    } else {
+      console.log('Skipping silver goal update (not editable)');
+    }
+
+    if (editableGoals.includes('gold')) {
+      console.log('Updating gold goal...');
+      try {
+        await updateGoal('gold', gold.trim());
+        console.log('Gold goal updated successfully');
+        updatedGoals.push('gold');
+      } catch (error) {
+        console.error('Failed to update gold goal:', error);
+        throw error;
+      }
+    } else {
+      console.log('Skipping gold goal update (not editable)');
+    }
+
+    console.log('Updated goals:', updatedGoals);
 
     // 2. 新しい目標履歴スロットを作成
     console.log('Creating goal history slot...');
@@ -68,8 +110,8 @@ export async function PUT(request: NextRequest) {
     console.log('Goal history slot created successfully');
 
     // 更新後の目標を取得して返す
-    const updatedGoals = await getGoals();
-    return NextResponse.json(updatedGoals);
+    const latestGoals = await getGoals();
+    return NextResponse.json(latestGoals);
   } catch (error) {
     console.error('Failed to update goals:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');

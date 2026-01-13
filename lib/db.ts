@@ -155,10 +155,31 @@ export async function updateGoal(
 ): Promise<Goal> {
   const supabase = await createClient();
 
+  console.log('=== updateGoal: Start ===');
+  console.log('Level:', level);
+  console.log('User ID:', userId);
+  console.log('New description:', description);
+
+  // 更新前の値を取得
+  const { data: currentGoal } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('level', level)
+    .maybeSingle();
+
+  if (currentGoal) {
+    console.log('Current description:', currentGoal.description);
+  } else {
+    console.warn('No current goal found for level:', level);
+  }
+
   const updateData: GoalUpdate = {
     description,
     updated_at: new Date().toISOString(),
   };
+
+  console.log('Update data:', updateData);
 
   const { data, error } = await supabase
     .from('goals')
@@ -174,8 +195,13 @@ export async function updateGoal(
     console.error('User ID:', userId);
     console.error('Level:', level);
     console.error('Description:', description);
+    console.error('Error code:', error.code);
+    console.error('Error hint:', error.hint);
     throw new Error(`Failed to update goal: ${error.message}`);
   }
+
+  console.log('Updated goal:', data);
+  console.log('=== updateGoal: Success ===');
 
   return toGoal(data);
 }
