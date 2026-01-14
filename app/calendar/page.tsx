@@ -1,7 +1,7 @@
 // カレンダー画面（実装計画書に従った実装）
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { getDailyRecords } from '@/lib/db';
+import { getDailyRecords, calculateStreakFromRecords } from '@/lib/db';
 import { formatDate, getDaysInMonth, getLevelColor, formatDateShort, getLevelLabel } from '@/lib/utils';
 import Link from 'next/link';
 import { MOCK_USER_ID } from '@/lib/mockData';
@@ -36,8 +36,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const prevUrl = `/calendar?year=${prevYear}&month=${prevMonth}`;
   const nextUrl = `/calendar?year=${nextYear}&month=${nextMonth}`;
 
+  // ストリークを計算
+  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+
   return (
-    <AppLayout pageTitle="カレンダー">
+    <AppLayout pageTitle="カレンダー" streakDays={streakDays}>
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           {/* 月選択 */}

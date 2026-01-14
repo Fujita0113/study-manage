@@ -2,7 +2,6 @@ import {
   UserSettings,
   Goal,
   DailyRecord,
-  Streak,
   AchievementLevel,
   GoalHistorySlot,
   GoalHistory,
@@ -212,16 +211,6 @@ export const mockDailyRecords: DailyRecord[] = [
     updatedAt: new Date(getDateString(1)),
   },
 ];
-
-// Mock Streak
-export const mockStreak: Streak = {
-  id: 'streak-001',
-  userId: MOCK_USER_ID,
-  currentStreak: 14, // 14日連続達成中
-  longestStreak: 14,
-  lastRecordedDate: getDateString(1), // 昨日が最後の記録
-  updatedAt: new Date(),
-};
 
 // Mock Goal History Slots
 export const mockGoalHistorySlots: GoalHistorySlot[] = [

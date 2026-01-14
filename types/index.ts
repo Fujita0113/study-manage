@@ -33,16 +33,6 @@ export interface DailyRecord {
   updatedAt: Date;
 }
 
-// Streak
-export interface Streak {
-  id: string;
-  userId: string;
-  currentStreak: number;
-  longestStreak: number;
-  lastRecordedDate?: string; // YYYY-MM-DD
-  updatedAt: Date;
-}
-
 // Suggestion Banner Types
 export type SuggestionType = 'level_up' | 'level_down';
 

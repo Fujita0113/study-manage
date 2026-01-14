@@ -175,42 +175,6 @@ interface SuggestionDisplayLog {
 
 ---
 
-### 5. Streak（ストリーク情報）
-
-連続記録日数を管理します。
-
-#### TypeScript型定義
-
-```typescript
-interface Streak {
-  id: string;                    // UUID
-  user_id: string;               // 外部キー: User.id
-  current_streak: number;        // 現在の連続日数
-  longest_streak: number;        // 過去最高連続日数
-  last_recorded_date?: string;   // 最後に記録した日（YYYY-MM-DD形式）
-  updated_at: Date;              // 最終更新日時
-}
-```
-
-#### フィールド詳細
-
-| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
-|------------|-----|------|------------|--------------|
-| `id` | string (UUID) | ✓ | - | 自動生成 |
-| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id）、UNIQUE |
-| `current_streak` | number | ✓ | 0 | 0以上の整数 |
-| `longest_streak` | number | ✓ | 0 | 0以上の整数 |
-| `last_recorded_date` | string | - | null | YYYY-MM-DD形式 |
-| `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
-
-#### ストリークカウントの定義
-
-- **カウント対象**: Bronze以上（Bronze, Silver, Gold のいずれか）を達成した日
-- **リセット条件**: 1日でも記録なし、またはBronze未達成（achievement_level='none'）の日があった場合、翌日カウントは0にリセット
-- **日付判定**: ユーザーのブラウザローカル時刻を使用（23:59:59までに記録確定）
-
----
-
 ## エンティティ間のリレーションシップ（ERD）
 
 ```mermaid
@@ -218,7 +182,6 @@ erDiagram
     User ||--o{ Goal : "has"
     User ||--o{ DailyRecord : "has"
     User ||--o{ SuggestionDisplayLog : "has"
-    User ||--|| Streak : "has"
 
     User {
         string id PK
@@ -255,15 +218,6 @@ erDiagram
         string display_date
         Date created_at
     }
-
-    Streak {
-        string id PK
-        string user_id FK
-        number current_streak
-        number longest_streak
-        string last_recorded_date
-        Date updated_at
-    }
 ```
 
 ---
@@ -286,12 +240,6 @@ erDiagram
 - **関係**: 1対多
 - **説明**: 1ユーザーは複数の提案バナー表示履歴を持つ
 - **外部キー**: `SuggestionDisplayLog.user_id` → `User.id`
-- **削除時の動作**: `ON DELETE CASCADE`
-
-### User → Streak
-- **関係**: 1対1
-- **説明**: 1ユーザーにつき1つのストリーク情報を持つ
-- **外部キー**: `Streak.user_id` → `User.id` (UNIQUE制約)
 - **削除時の動作**: `ON DELETE CASCADE`
 
 ---
@@ -372,16 +320,6 @@ CREATE TABLE suggestion_display_log (
 
 CREATE INDEX idx_suggestion_display_log_user_date ON suggestion_display_log(user_id, display_date);
 
--- Streaks テーブル
-CREATE TABLE streaks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-  current_streak INTEGER NOT NULL DEFAULT 0 CHECK (current_streak >= 0),
-  longest_streak INTEGER NOT NULL DEFAULT 0 CHECK (longest_streak >= 0),
-  last_recorded_date DATE,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- 自動更新トリガー (updated_at)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -394,7 +332,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_daily_records_updated_at BEFORE UPDATE ON daily_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_streaks_updated_at BEFORE UPDATE ON streaks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---

@@ -10,9 +10,10 @@ import type { Goal, GoalLevel, GoalChangeReason } from '@/types';
 interface GoalsClientProps {
   initialGoals: Goal[];
   editParam: string | null;
+  streakDays: number;
 }
 
-export function GoalsClient({ initialGoals, editParam }: GoalsClientProps) {
+export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClientProps) {
   const router = useRouter();
 
   const [bronzeDesc, setBronzeDesc] = useState(
@@ -95,7 +96,7 @@ export function GoalsClient({ initialGoals, editParam }: GoalsClientProps) {
   }
 
   return (
-    <AppLayout pageTitle="目標編集">
+    <AppLayout pageTitle="目標編集" streakDays={streakDays}>
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-slate-800 mb-2">目標の編集</h2>

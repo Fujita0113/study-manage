@@ -3,7 +3,8 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import {
   getDailyRecords,
-  getSuggestion
+  getSuggestion,
+  calculateStreakFromRecords
 } from '@/lib/db';
 import {
   formatDate,
@@ -66,8 +67,11 @@ export default async function HomePage() {
   // 4. 提案バナーの表示判定
   const suggestion = await getSuggestion();
 
+  // 5. ストリークを計算
+  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+
   return (
-    <AppLayout pageTitle="ホーム">
+    <AppLayout pageTitle="ホーム" streakDays={streakDays}>
       {/* デイリーレポートカードグリッド */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {dailyReportCards.map((card) => (

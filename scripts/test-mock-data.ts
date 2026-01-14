@@ -86,24 +86,8 @@ async function testMockData() {
     });
   }
 
-  // テスト4: ストリークの確認
-  console.log('\n📋 テスト4: ストリークの確認...');
-  const { data: streak, error: streakError } = await supabase
-    .from('streaks')
-    .select('*')
-    .eq('user_id', MOCK_USER_ID)
-    .single();
-
-  if (streakError || !streak) {
-    console.error('❌ ストリークが見つかりません:', streakError?.message);
-  } else {
-    console.log('✅ ストリークが存在します');
-    console.log(`   現在: ${streak.current_streak}日連続`);
-    console.log(`   最高: ${streak.longest_streak}日連続`);
-  }
-
-  // テスト5: 目標履歴スロットの確認
-  console.log('\n📋 テスト5: 目標履歴スロットの確認...');
+  // テスト4: 目標履歴スロットの確認
+  console.log('\n📋 テスト4: 目標履歴スロットの確認...');
   const { data: slots, error: slotsError } = await supabase
     .from('goal_history_slots')
     .select('*')

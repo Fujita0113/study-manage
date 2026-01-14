@@ -7,14 +7,12 @@
 import {
   mockUserSettings,
   mockDailyRecords,
-  mockStreak,
   MOCK_USER_ID,
 } from './mockData';
 import {
   UserSettings,
   Goal,
   DailyRecord,
-  Streak,
   GoalLevel,
   Suggestion,
   SuggestionType,
@@ -313,15 +311,43 @@ export async function updateDailyRecord(
 
 // ==================== Streak ====================
 
-export async function getStreak(userId: string = MOCK_USER_ID): Promise<Streak> {
-  return mockStreak;
-}
+/**
+ * daily_recordsからストリークを計算
+ * Bronze以上の連続達成日数をカウント
+ *
+ * @param userId - ユーザーID
+ * @returns 現在の連続日数
+ */
+export async function calculateStreakFromRecords(
+  userId: string = MOCK_USER_ID
+): Promise<number> {
+  const records = await getDailyRecords(userId);
 
-export async function updateStreak(
-  userId: string = MOCK_USER_ID,
-  data: Partial<Streak>
-): Promise<Streak> {
-  return { ...mockStreak, ...data, updatedAt: new Date() };
+  // Bronze以上の連続日数をカウント
+  let streak = 0;
+  const today = new Date();
+
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i];
+    const expectedDate = new Date(today);
+    expectedDate.setDate(expectedDate.getDate() - i);
+    const expectedDateStr = formatDate(expectedDate);
+
+    // 日付が連続していない場合は終了
+    if (record.date !== expectedDateStr) {
+      break;
+    }
+
+    // Bronze以上なら連続
+    if (['bronze', 'silver', 'gold'].includes(record.achievementLevel)) {
+      streak++;
+    } else {
+      // noneが出たら連続終了
+      break;
+    }
+  }
+
+  return streak;
 }
 
 // ==================== Suggestion Display Log ====================
