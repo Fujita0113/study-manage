@@ -314,6 +314,7 @@ export async function updateDailyRecord(
 /**
  * daily_recordsからストリークを計算
  * Bronze以上の連続達成日数をカウント
+ * 当日の記録がまだない場合は、昨日までの連続達成日数を表示する
  *
  * @param userId - ユーザーID
  * @returns 現在の連続日数
@@ -323,12 +324,26 @@ export async function calculateStreakFromRecords(
 ): Promise<number> {
   const records = await getDailyRecords(userId);
 
-  // Bronze以上の連続日数をカウント
+  if (records.length === 0) {
+    return 0;
+  }
+
   let streak = 0;
   const today = new Date();
+  const todayStr = formatDate(today);
 
-  for (let i = 0; i < records.length; i++) {
-    const record = records[i];
+  // 今日の記録があるかチェック
+  const hasTodayRecord = records[0]?.date === todayStr;
+
+  // 今日の記録がない場合は、昨日（i=1）から開始
+  // 今日の記録がある場合は、今日（i=0）から開始
+  const startIndex = hasTodayRecord ? 0 : 1;
+
+  for (let i = startIndex; i < records.length + startIndex; i++) {
+    const recordIndex = i - startIndex;
+    if (recordIndex >= records.length) break;
+
+    const record = records[recordIndex];
     const expectedDate = new Date(today);
     expectedDate.setDate(expectedDate.getDate() - i);
     const expectedDateStr = formatDate(expectedDate);
