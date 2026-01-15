@@ -23,12 +23,9 @@ type GoalHistoryRow = Database['public']['Tables']['goal_history']['Row'];
 type GoalHistoryInsert = Database['public']['Tables']['goal_history']['Insert'];
 type GoalHistoryUpdate = Database['public']['Tables']['goal_history']['Update'];
 
-// デバッグ用: ユーザーIDを固定
-const DEFAULT_USER_ID = 'test-user-001';
-
 // ==================== Goals ====================
 
-export async function getGoalsAction(userId: string = DEFAULT_USER_ID): Promise<Goal[]> {
+export async function getGoalsAction(userId: string): Promise<Goal[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -53,7 +50,7 @@ export async function getGoalsAction(userId: string = DEFAULT_USER_ID): Promise<
 export async function updateGoalAction(
   level: GoalLevel,
   description: string,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<Goal> {
   const supabase = await createClient();
 
@@ -86,7 +83,7 @@ export async function updateGoalAction(
 
 export async function getDailyRecordByDateAction(
   date: string,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<DailyRecord | null> {
   const supabase = await createClient();
 
@@ -115,7 +112,7 @@ export async function getDailyRecordByDateAction(
 
 export async function createDailyRecordAction(
   recordData: Omit<DailyRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<DailyRecord> {
   const supabase = await createClient();
 
@@ -153,7 +150,7 @@ export async function createDailyRecordAction(
  * 現在進行中のスロットを取得
  */
 export async function getCurrentGoalSlotAction(
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<GoalHistorySlot | null> {
   const supabase = await createClient();
 
@@ -229,7 +226,7 @@ export async function createGoalHistorySlotAction(
   silverGoal: string,
   goldGoal: string,
   changeReason: GoalChangeReason,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<GoalHistorySlot> {
   const supabase = await createClient();
 

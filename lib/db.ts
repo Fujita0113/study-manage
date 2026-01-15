@@ -6,7 +6,6 @@
 import {
   mockUserSettings,
   mockDailyRecords,
-  MOCK_USER_ID,
 } from './mockData';
 import {
   UserSettings,
@@ -89,12 +88,9 @@ function toGoalHistorySlot(dbSlot: GoalHistorySlotRow): GoalHistorySlot {
   };
 }
 
-// デバッグ用: ユーザーIDを固定
-const DEFAULT_USER_ID = 'test-user-001';
-
 // ==================== User Settings ====================
 
-export async function getUserSettings(userId: string = DEFAULT_USER_ID): Promise<UserSettings> {
+export async function getUserSettings(userId: string): Promise<UserSettings> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -114,7 +110,7 @@ export async function getUserSettings(userId: string = DEFAULT_USER_ID): Promise
 }
 
 export async function updateUserSettings(
-  userId: string = DEFAULT_USER_ID,
+  userId: string,
   updates: Partial<UserSettings>
 ): Promise<UserSettings> {
   const supabase = await createClient();
@@ -140,7 +136,7 @@ export async function updateUserSettings(
 
 // ==================== Goals ====================
 
-export async function getGoals(userId: string = MOCK_USER_ID): Promise<Goal[]> {
+export async function getGoals(userId: string): Promise<Goal[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -286,7 +282,7 @@ export async function getGoalByLevel(
 export async function updateGoal(
   level: GoalLevel,
   description: string,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<Goal> {
   const supabase = await createClient();
 
@@ -344,7 +340,7 @@ export async function updateGoal(
 // ==================== Daily Records ====================
 
 export async function getDailyRecords(
-  userId: string = DEFAULT_USER_ID,
+  userId: string,
   options?: { startDate?: string; endDate?: string }
 ): Promise<DailyRecord[]> {
   const supabase = await createClient();
@@ -406,7 +402,7 @@ export async function getDailyRecordByDate(
 
 export async function createDailyRecord(
   recordData: Omit<DailyRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<DailyRecord> {
   const supabase = await createClient();
 
@@ -488,7 +484,7 @@ export async function updateDailyRecord(
  * @returns 現在の連続日数
  */
 export async function calculateStreakFromRecords(
-  userId: string = MOCK_USER_ID
+  userId: string
 ): Promise<number> {
   const records = await getDailyRecords(userId);
 
@@ -571,7 +567,7 @@ function countConsecutiveDays(
 }
 
 export async function getSuggestion(
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<Suggestion | null> {
   // Check for level up suggestion (exactly 14, 28, 42... consecutive days at or above each level)
   const records = await getDailyRecords(userId);
@@ -653,7 +649,7 @@ export async function getGoalHistorySlots(
  * 現在進行中のスロットを取得
  */
 export async function getCurrentGoalSlot(
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<GoalHistorySlot | null> {
   const supabase = await createClient();
 
@@ -685,7 +681,7 @@ export async function createGoalHistorySlot(
   silverGoal: string,
   goldGoal: string,
   changeReason: GoalChangeReason,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<GoalHistorySlot> {
   const supabase = await createClient();
   const today = new Date().toISOString().split('T')[0];

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDailyRecords, getDailyRecordByDate, createDailyRecord } from '@/lib/db';
+import { getUser } from '@/lib/auth/server';
 import type { DailyRecord } from '@/types';
 
 /**
@@ -13,6 +14,15 @@ import type { DailyRecord } from '@/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    // 認証チェック
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get('date');
     const startDate = searchParams.get('startDate');
@@ -20,12 +30,12 @@ export async function GET(request: NextRequest) {
 
     // 特定の日付の記録を取得
     if (date) {
-      const record = await getDailyRecordByDate(date);
+      const record = await getDailyRecordByDate(date, user.id);
       return NextResponse.json(record);
     }
 
     // 期間指定で記録を取得
-    const records = await getDailyRecords(undefined, {
+    const records = await getDailyRecords(user.id, {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     });
@@ -52,6 +62,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // 認証チェック
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { date, achievementLevel, doText, journalText } = body;
 
@@ -69,7 +88,7 @@ export async function POST(request: NextRequest) {
       achievementLevel,
       doText,
       journalText,
-    });
+    }, user.id);
 
     return NextResponse.json(record, { status: 201 });
   } catch (error) {

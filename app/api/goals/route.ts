@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoals, updateGoal, createGoalHistorySlot } from '@/lib/db';
+import { getUser } from '@/lib/auth/server';
 import type { GoalChangeReason } from '@/types';
 
 /**
@@ -8,7 +9,16 @@ import type { GoalChangeReason } from '@/types';
  */
 export async function GET() {
   try {
-    const goals = await getGoals();
+    // 認証チェック
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const goals = await getGoals(user.id);
     return NextResponse.json(goals);
   } catch (error) {
     console.error('Failed to fetch goals:', error);
@@ -32,6 +42,15 @@ export async function GET() {
  */
 export async function PUT(request: NextRequest) {
   try {
+    // 認証チェック
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { bronze, silver, gold, editableGoals, changeReason } = body;
 
@@ -58,7 +77,7 @@ export async function PUT(request: NextRequest) {
     if (editableGoals.includes('bronze')) {
       console.log('Updating bronze goal...');
       try {
-        await updateGoal('bronze', bronze.trim());
+        await updateGoal('bronze', bronze.trim(), user.id);
         console.log('Bronze goal updated successfully');
         updatedGoals.push('bronze');
       } catch (error) {
@@ -72,7 +91,7 @@ export async function PUT(request: NextRequest) {
     if (editableGoals.includes('silver')) {
       console.log('Updating silver goal...');
       try {
-        await updateGoal('silver', silver.trim());
+        await updateGoal('silver', silver.trim(), user.id);
         console.log('Silver goal updated successfully');
         updatedGoals.push('silver');
       } catch (error) {
@@ -86,7 +105,7 @@ export async function PUT(request: NextRequest) {
     if (editableGoals.includes('gold')) {
       console.log('Updating gold goal...');
       try {
-        await updateGoal('gold', gold.trim());
+        await updateGoal('gold', gold.trim(), user.id);
         console.log('Gold goal updated successfully');
         updatedGoals.push('gold');
       } catch (error) {
@@ -105,12 +124,13 @@ export async function PUT(request: NextRequest) {
       bronze.trim(),
       silver.trim(),
       gold.trim(),
-      (changeReason as GoalChangeReason) || 'initial'
+      (changeReason as GoalChangeReason) || 'initial',
+      user.id
     );
     console.log('Goal history slot created successfully');
 
     // 更新後の目標を取得して返す
-    const latestGoals = await getGoals();
+    const latestGoals = await getGoals(user.id);
     return NextResponse.json(latestGoals);
   } catch (error) {
     console.error('Failed to update goals:', error);

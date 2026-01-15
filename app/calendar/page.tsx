@@ -3,14 +3,17 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { getDailyRecords, calculateStreakFromRecords } from '@/lib/db';
 import { formatDate, getDaysInMonth, getLevelColor, formatDateShort, getLevelLabel } from '@/lib/utils';
+import { requireAuth } from '@/lib/auth/server';
 import Link from 'next/link';
-import { MOCK_USER_ID } from '@/lib/mockData';
 
 interface CalendarPageProps {
   searchParams?: { year?: string; month?: string };
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
+  // 認証チェックとユーザー情報の取得
+  const user = await requireAuth();
+
   // URLパラメータから年月を取得（デフォルトは今月）
   const now = new Date();
   const currentYear = searchParams?.year ? parseInt(searchParams.year) : now.getFullYear();
@@ -22,7 +25,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   // 該当月の記録を取得
   const startDate = formatDate(new Date(currentYear, currentMonth - 1, 1));
   const endDate = formatDate(new Date(currentYear, currentMonth, 0));
-  const records = await getDailyRecords(MOCK_USER_ID, { startDate, endDate });
+  const records = await getDailyRecords(user.id, { startDate, endDate });
 
   // 月の最初の曜日を取得（0: 日曜、1: 月曜...）
   const firstDayOfWeek = new Date(currentYear, currentMonth - 1, 1).getDay();
@@ -37,7 +40,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const nextUrl = `/calendar?year=${nextYear}&month=${nextMonth}`;
 
   // ストリークを計算
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return (
     <AppLayout pageTitle="カレンダー" streakDays={streakDays}>

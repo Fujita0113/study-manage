@@ -1,11 +1,12 @@
 // 設定画面 (Server Component)
 
 import { calculateStreakFromRecords } from '@/lib/db';
-import { MOCK_USER_ID } from '@/lib/mockData';
+import { requireAuth } from '@/lib/auth/server';
 import { SettingsPageClient } from './SettingsPageClient';
 
 export default async function SettingsPage() {
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const user = await requireAuth();
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return <SettingsPageClient streakDays={streakDays} />;
 }

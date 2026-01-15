@@ -3,24 +3,26 @@
 import { Suspense } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { getGoals, calculateStreakFromRecords } from '@/lib/db';
+import { requireAuth } from '@/lib/auth/server';
 import { GoalsClient } from './GoalsClient';
-import { MOCK_USER_ID } from '@/lib/mockData';
 
 interface GoalsPageProps {
   searchParams?: Promise<{ edit?: string }>;
 }
 
 async function GoalsPageContent({ searchParams }: GoalsPageProps) {
-  const goals = await getGoals();
+  const user = await requireAuth();
+  const goals = await getGoals(user.id);
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const editParam = resolvedSearchParams.edit || null;
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return <GoalsClient initialGoals={goals} editParam={editParam} streakDays={streakDays} />;
 }
 
 export default async function GoalsPage({ searchParams }: GoalsPageProps) {
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const user = await requireAuth();
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return (
     <Suspense fallback={

@@ -12,7 +12,7 @@ import {
   getLevelLabel
 } from '@/lib/utils';
 import Link from 'next/link';
-import { MOCK_USER_ID } from '@/lib/mockData';
+import { requireAuth } from '@/lib/auth/server';
 import { DailyReportCard } from '@/types';
 import { SuggestionBanner } from '@/components/SuggestionBanner';
 
@@ -34,13 +34,16 @@ function createJournalExcerpt(journalText?: string): string | undefined {
 }
 
 export default async function HomePage() {
+  // 認証チェックとユーザー情報の取得
+  const user = await requireAuth();
+
   // 1. 今日の日付を取得
   const today = formatDate(new Date());
 
   // 2. 過去14日分の記録を取得
   const endDate = today;
   const startDate = formatDate(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
-  const records = await getDailyRecords(MOCK_USER_ID, { startDate, endDate });
+  const records = await getDailyRecords(user.id, { startDate, endDate });
 
   // 3. デイリーレポートカードデータを生成（記録がある日のみ、新しい順）
   const dailyReportCards: DailyReportCard[] = records
@@ -65,10 +68,10 @@ export default async function HomePage() {
     .sort((a, b) => b.date.localeCompare(a.date)); // 新しい順
 
   // 4. 提案バナーの表示判定
-  const suggestion = await getSuggestion();
+  const suggestion = await getSuggestion(user.id);
 
   // 5. ストリークを計算
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return (
     <AppLayout pageTitle="ホーム" streakDays={streakDays}>

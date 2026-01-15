@@ -2,7 +2,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { getDailyRecordByDate, calculateStreakFromRecords } from '@/lib/db';
-import { MOCK_USER_ID } from '@/lib/mockData';
+import { requireAuth } from '@/lib/auth/server';
 import {
   formatDateJP,
   getLevelLabel,
@@ -15,15 +15,18 @@ interface DayDetailPageProps {
 }
 
 export default async function DayDetailPage({ params }: DayDetailPageProps) {
+  // 認証チェックとユーザー情報の取得
+  const user = await requireAuth();
+
   // Next.js 15対応: paramsがPromiseの場合はawaitする
   const resolvedParams = 'then' in params ? await params : params;
   const { date } = resolvedParams;
 
   // 日付の記録を取得
-  const record = await getDailyRecordByDate(date);
+  const record = await getDailyRecordByDate(date, user.id);
 
   // ストリークを計算
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   if (!record) {
     return (

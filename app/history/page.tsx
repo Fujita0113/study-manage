@@ -1,11 +1,12 @@
 // 目標変遷画面 (Server Component)
 
 import { calculateStreakFromRecords } from '@/lib/db';
-import { MOCK_USER_ID } from '@/lib/mockData';
+import { requireAuth } from '@/lib/auth/server';
 import { HistoryPageClient } from './HistoryPageClient';
 
 export default async function HistoryPage() {
-  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+  const user = await requireAuth();
+  const streakDays = await calculateStreakFromRecords(user.id);
 
   return <HistoryPageClient streakDays={streakDays} />;
 }
