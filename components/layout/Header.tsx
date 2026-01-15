@@ -3,16 +3,13 @@
 // ヘッダーコンポーネント
 
 import Link from 'next/link';
-import { useAppState } from '@/lib/store';
 
 interface HeaderProps {
   pageTitle: string;
+  streakDays: number;
 }
 
-export function Header({ pageTitle }: HeaderProps) {
-  const { getStreakDays } = useAppState();
-  const streak = getStreakDays();
-
+export function Header({ pageTitle, streakDays }: HeaderProps) {
   return (
     <div className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-10">
       {/* 左側: ページタイトル */}
@@ -23,7 +20,7 @@ export function Header({ pageTitle }: HeaderProps) {
         {/* ストリーク表示 */}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-lg">
           <span className="text-lg">🔥</span>
-          <span className="text-sm font-medium text-orange-700">{streak} days</span>
+          <span className="text-sm font-medium text-orange-700">{streakDays} days</span>
         </div>
 
         {/* 今日の記録をつけるボタン */}

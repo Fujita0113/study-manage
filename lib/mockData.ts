@@ -2,7 +2,6 @@ import {
   UserSettings,
   Goal,
   DailyRecord,
-  Streak,
   AchievementLevel,
   GoalHistorySlot,
   GoalHistory,
@@ -16,8 +15,8 @@ function getDateString(daysAgo: number): string {
   return date.toISOString().split('T')[0];
 }
 
-// Mock User ID
-export const MOCK_USER_ID = 'mock-user-001';
+// Mock User ID (Supabaseで使用しているUUID)
+export const MOCK_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 // Mock User Settings
 export const mockUserSettings: UserSettings = {
@@ -157,16 +156,6 @@ export const mockDailyRecords: DailyRecord[] = [
   { id: 'record-2026-01-06', userId: MOCK_USER_ID, date: '2026-01-06', achievementLevel: 'bronze', doText: '30分学習', journalText: '最低限達成', createdAt: new Date('2026-01-06'), updatedAt: new Date('2026-01-06') },
   { id: 'record-2026-01-07', userId: MOCK_USER_ID, date: '2026-01-07', achievementLevel: 'silver', doText: '2機能実装', journalText: '継続中', createdAt: new Date('2026-01-07'), updatedAt: new Date('2026-01-07') },
 ];
-
-// Mock Streak
-export const mockStreak: Streak = {
-  id: 'streak-001',
-  userId: MOCK_USER_ID,
-  currentStreak: 14, // 14日連続達成中
-  longestStreak: 14,
-  lastRecordedDate: getDateString(1), // 昨日が最後の記録
-  updatedAt: new Date(),
-};
 
 // Mock Goal History Slots
 export const mockGoalHistorySlots: GoalHistorySlot[] = [

@@ -1,7 +1,8 @@
 // 日詳細画面（シンプル版）
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { getDailyRecordByDate } from '@/lib/db';
+import { getDailyRecordByDate, calculateStreakFromRecords } from '@/lib/db';
+import { MOCK_USER_ID } from '@/lib/mockData';
 import {
   formatDateJP,
   getLevelLabel,
@@ -21,9 +22,12 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
   // 日付の記録を取得
   const record = await getDailyRecordByDate(date);
 
+  // ストリークを計算
+  const streakDays = await calculateStreakFromRecords(MOCK_USER_ID);
+
   if (!record) {
     return (
-      <AppLayout pageTitle="日詳細">
+      <AppLayout pageTitle="日詳細" streakDays={streakDays}>
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-slate-800 mb-2">
@@ -43,7 +47,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
   }
 
   return (
-    <AppLayout pageTitle={`${formatDateJP(date)} の記録`}>
+    <AppLayout pageTitle={`${formatDateJP(date)} の記録`} streakDays={streakDays}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* ナビゲーション */}
         <div>

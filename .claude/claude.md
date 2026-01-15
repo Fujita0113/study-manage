@@ -88,17 +88,64 @@ requirements.mdを更新
    - 変更内容をrequirements.mdに反映する
    - ユーザーに更新内容を確認してもらう
 
-4. **実装計画**
-   - TodoWriteツールで作業を分解する
-   - 影響範囲を特定する
+4. **依存関係の確認（必須）**
+   - **実装計画を立てる前に、必ず `cat package.json` を実行すること**
+   - 使用予定のモジュールのバージョンを確認する
+   - 依存関係に注意が必要なモジュールのバージョンを実装計画に明記する
+   - バージョン互換性の問題が予想される場合は、ユーザーに確認する
 
-5. **実装**
-   - requirements.mdに基づいて実装する
+5. **実装計画の作成（必須）**
+   - **実装を開始する前に、必ずdocs配下に実装計画ドキュメントを作成すること**
+   - ファイル名は `docs/[タスク名]-plan.md` の形式
+   - 計画には以下を含める：
+     - 作業の目的と概要
+     - **使用する主要モジュールとそのバージョン（package.jsonから確認した情報）**
+     - **依存関係で注意すべき点（バージョン互換性など）**
+     - 変更が必要なファイルのリスト
+     - 各ファイルでの具体的な変更内容
+     - 実装手順（ステップバイステップ）
+     - 想定される影響範囲
+     - テスト方針
+   - 計画をユーザーに確認してもらう
+   - **計画なしに実装を開始することは絶対に禁止**
+
+6. **実装**
+   - requirements.mdと作成した実装計画に基づいて実装する
    - 既存コードとの一貫性を保つ
+   - 計画に沿って段階的に進める
+   - TodoWriteツールで進捗を管理する
 
-6. **確認**
+7. **確認**
    - requirements.mdの要件を満たしているか確認する
+   - 実装計画通りに実装できているか確認する
    - ユーザーに動作確認を依頼する
+
+---
+
+## バグ修正時の特別ルール
+
+### 新たなバグ発見時の対応
+
+バグ修正作業中に、**元の修正対象とは異なる別のバグを発見した場合**：
+
+1. **作業を一旦停止する**
+   - 現在の修正作業を中断する
+
+2. **新たなバグをユーザーに報告する**
+   - どのような問題を発見したか説明する
+   - 元の修正対象との関連性を説明する
+   - 発見場所と想定される原因を報告する
+
+3. **ユーザーの指示を待つ**
+   - 新しいバグを先に修正すべきか確認する
+   - 元の修正を続けるべきか確認する
+   - 両方を対応する場合の優先順位を確認する
+
+4. **指示に従って作業を再開する**
+   - 必要に応じて実装計画を更新する
+   - TodoWriteで新しいタスクを追加する
+
+**重要**: 発見した新しいバグを勝手に修正したり、無視して元の作業を続けることは禁止です。必ずユーザーに報告して指示を仰いでください。
 
 ---
 
@@ -118,6 +165,16 @@ requirements.mdを更新
 4. **requirements.mdと矛盾する実装をする**
    - requirements.mdが常に正しい情報源です
 
+5. **package.jsonを確認せずに実装計画を立てる、または実装を開始する**
+   - 必ず `cat package.json` で依存関係とバージョンを確認すること
+   - 使用予定のモジュールのバージョンを実装計画に明記すること
+
+6. **実装計画を作成せずに実装を開始する**
+   - 必ずdocs配下に実装計画ドキュメントを作成してから実装すること
+
+7. **バグ修正中に発見した別のバグを勝手に修正する、または無視する**
+   - 必ずユーザーに報告して指示を仰ぐこと
+
 ---
 
 ## その他の注意事項
@@ -125,3 +182,127 @@ requirements.mdを更新
 - requirements.mdに記載されていない詳細仕様については、既存のコードを参照するか、ユーザーに確認してください
 - データモデルの詳細は[docs/data-model.md](docs/data-model.md)を参照してください
 - コードの一貫性を保つため、既存のコーディングスタイルに従ってください
+
+### Supabaseコマンドの実行方法
+
+- `npx supabase` コマンドは**プロジェクトルートから直接実行すること**
+- `cd supabase` でディレクトリ移動する必要はありません
+- 例：
+  - ✅ 正しい: `npx supabase db push`
+  - ❌ 間違い: `cd supabase && npx supabase db push`
+
+### Supabase Migrationsの編集方法
+
+- **migrationsファイル（`supabase/migrations/*.sql`）を編集した場合、必ずSupabase CLIを使ってpushすること**
+- 手順：
+  1. `supabase/migrations/` 配下のSQLファイルを編集
+  2. `npx supabase db push` を実行してデータベースに反映
+- **重要**: migrationsファイルを編集しただけでは、データベースには反映されません。必ず `db push` を実行してください
+- 例：
+  ```bash
+  # migrationsファイルを編集後
+  npx supabase db push
+  ```
+
+### Next.js Server ComponentとClient Componentの使い分け（重要）
+
+このプロジェクトでは、Next.js App Routerを使用しています。**Server ComponentとClient Componentの境界を明確にする必要があります。**
+
+#### 絶対に守るべきルール
+
+1. **`lib/db.ts` の関数は絶対にClient Componentで直接使用してはいけない**
+   - `lib/db.ts` は `@/lib/supabase/server` (Server Component専用) を内部で使用している
+   - `@/lib/supabase/server` は `next/headers` を使用しており、Client Componentでは動作しない
+
+2. **Client Component (`'use client'`) でデータ取得する場合は、必ずAPI Routes経由でアクセスすること**
+   - ✅ 正しい: Client Component → API Route (`/api/*`) → `lib/db.ts`
+   - ❌ 間違い: Client Component → `lib/db.ts` 直接インポート
+
+3. **Server Componentを使用する場合は、親コンポーネントもServer Componentでなければならない**
+   - ✅ 正しい: Server Component → Server Component
+   - ❌ 間違い: Client Component → Server Component
+
+#### よくあるエラーパターンと対処法
+
+##### エラー: `You're importing a component that needs "next/headers"`
+
+**原因**: Client Componentで、Server Component専用の機能を使用している
+
+**対処法**:
+1. **データ取得をAPI Route経由に変更する**
+   - Client Componentでは `fetch('/api/...')` を使用
+   - API Route内で `lib/db.ts` の関数を呼び出す
+
+2. **または、親コンポーネントをServer Componentに変更する**
+   - `'use client'` ディレクティブを削除
+   - `useState`、`useEffect` などのReact Hooksは使用不可になる
+   - インタラクティブな機能が必要な場合は、子コンポーネントをClient Componentに分離
+
+#### 実装パターン
+
+##### パターン1: Client ComponentでAPI Routes経由でデータ取得
+
+```typescript
+// ❌ 間違い
+'use client';
+import { getGoals } from '@/lib/db'; // Server Component専用の関数を直接インポート
+
+export default function MyPage() {
+  const goals = await getGoals(); // エラー！
+}
+```
+
+```typescript
+// ✅ 正しい
+'use client';
+import { useEffect, useState } from 'react';
+
+export default function MyPage() {
+  const [goals, setGoals] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/goals')
+      .then(res => res.json())
+      .then(data => setGoals(data));
+  }, []);
+}
+```
+
+##### パターン2: Server Componentでデータ取得してClient Componentに渡す
+
+```typescript
+// ✅ 正しい
+// app/page.tsx (Server Component)
+import { getGoals } from '@/lib/db';
+import { ClientGoalsList } from './ClientGoalsList';
+
+export default async function Page() {
+  const goals = await getGoals();
+
+  return <ClientGoalsList initialGoals={goals} />;
+}
+
+// ClientGoalsList.tsx (Client Component)
+'use client';
+export function ClientGoalsList({ initialGoals }) {
+  // Client側のインタラクティブな処理
+}
+```
+
+#### トラブルシューティング
+
+コンポーネントを作成・編集する際は、以下をチェックしてください：
+
+1. **`'use client'` ディレクティブがあるか？**
+   - ある → Client Component → `lib/db.ts` を直接インポートしてはいけない
+   - ない → Server Component → `lib/db.ts` を直接使用可能
+
+2. **親コンポーネントの種類は？**
+   - Client Component → 子コンポーネントでServer Component専用機能は使えない
+   - Server Component → 子コンポーネントでもServer Component機能を使用可能
+
+3. **データ取得方法は適切か？**
+   - Client Component → API Routes経由 (`fetch('/api/...')`)
+   - Server Component → 直接 `lib/db.ts` 関数呼び出し
+
+**このルールに違反すると、`You're importing a component that needs "next/headers"` エラーが頻発します。必ず守ってください。**
