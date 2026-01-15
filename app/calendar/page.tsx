@@ -7,7 +7,7 @@ import { requireAuth } from '@/lib/auth/server';
 import Link from 'next/link';
 
 interface CalendarPageProps {
-  searchParams?: { year?: string; month?: string };
+  searchParams?: Promise<{ year?: string; month?: string }>;
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
@@ -15,9 +15,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const user = await requireAuth();
 
   // URLパラメータから年月を取得（デフォルトは今月）
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const now = new Date();
-  const currentYear = searchParams?.year ? parseInt(searchParams.year) : now.getFullYear();
-  const currentMonth = searchParams?.month ? parseInt(searchParams.month) : now.getMonth() + 1;
+  const currentYear = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year) : now.getFullYear();
+  const currentMonth = resolvedSearchParams.month ? parseInt(resolvedSearchParams.month) : now.getMonth() + 1;
 
   // 月の日付リストを生成
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
