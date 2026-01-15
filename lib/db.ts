@@ -124,6 +124,106 @@ export async function getGoals(userId: string = MOCK_USER_ID): Promise<Goal[]> {
   return (data || []).map(toGoal);
 }
 
+/**
+ * ユーザーが3つの目標（Bronze/Silver/Gold）を持っているかチェック
+ */
+export async function hasGoals(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goals')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Failed to check goals:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('User ID:', userId);
+    return false;
+  }
+
+  // 3つ全ての目標が存在する場合にのみtrueを返す
+  return data && data.length === 3;
+}
+
+/**
+ * 初期目標を一括作成
+ * goalsテーブルに3レコード挿入 + goal_history_slotsテーブルに初期スロット作成
+ */
+export async function createInitialGoals(
+  bronze: string,
+  silver: string,
+  gold: string,
+  userId: string
+): Promise<void> {
+  const startTime = Date.now();
+  console.log('[DB] createInitialGoals: Start', { userId, timestamp: new Date().toISOString() });
+  
+  const supabase = await createClient();
+
+  // 1. goals テーブルに3つの目標を挿入
+  const goalsToInsert: GoalInsert[] = [
+    { user_id: userId, level: 'bronze', description: bronze },
+    { user_id: userId, level: 'silver', description: silver },
+    { user_id: userId, level: 'gold', description: gold },
+  ];
+
+  console.log('[DB] Inserting goals:', goalsToInsert.map(g => ({ level: g.level, description: g.description?.substring(0, 50) })));
+  
+  const insertStartTime = Date.now();
+  const { data: insertedGoals, error: goalsError } = await supabase
+    .from('goals')
+    .insert(goalsToInsert)
+    .select('id, level, created_at');
+
+  const insertTime = Date.now() - insertStartTime;
+  console.log(`[DB] Insert completed (took ${insertTime}ms)`);
+
+  if (goalsError) {
+    console.error('[DB] Failed to create goals:', goalsError);
+    console.error('[DB] Error details:', JSON.stringify(goalsError, null, 2));
+    console.error('[DB] Goals to insert:', goalsToInsert);
+    throw new Error(`Failed to create goals: ${goalsError.message}`);
+  }
+
+  console.log('[DB] Goals inserted successfully:', insertedGoals?.map(g => ({ id: g.id, level: g.level, created_at: g.created_at })));
+
+  // 2. goal_history_slots に初期スロットを作成
+  const today = new Date().toISOString().split('T')[0];
+  const slotData: GoalHistorySlotInsert = {
+    user_id: userId,
+    bronze_goal: bronze,
+    silver_goal: silver,
+    gold_goal: gold,
+    start_date: today,
+    end_date: null,
+    change_reason: 'initial',
+  };
+
+  console.log('[DB] Inserting goal history slot:', { start_date: slotData.start_date, change_reason: slotData.change_reason });
+  
+  const slotInsertStartTime = Date.now();
+  const { data: insertedSlot, error: slotError } = await supabase
+    .from('goal_history_slots')
+    .insert(slotData)
+    .select('id, start_date, created_at');
+
+  const slotInsertTime = Date.now() - slotInsertStartTime;
+  console.log(`[DB] Slot insert completed (took ${slotInsertTime}ms)`);
+
+  if (slotError) {
+    console.error('[DB] Failed to create goal history slot:', slotError);
+    console.error('[DB] Error details:', JSON.stringify(slotError, null, 2));
+    console.error('[DB] Slot data:', slotData);
+    throw new Error(`Failed to create goal history slot: ${slotError.message}`);
+  }
+
+  console.log('[DB] Goal history slot inserted successfully:', insertedSlot?.[0] ? { id: insertedSlot[0].id, start_date: insertedSlot[0].start_date } : null);
+  
+  const totalTime = Date.now() - startTime;
+  console.log(`[DB] createInitialGoals: Complete (total time: ${totalTime}ms)`);
+}
+
 export async function getGoalByLevel(
   level: GoalLevel,
   userId: string = MOCK_USER_ID

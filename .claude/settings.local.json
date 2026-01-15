@@ -15,7 +15,9 @@
       "Bash(if not exist \"app\\\\api\\\\suggestions\\\\display\" mkdir \"app\\\\api\\\\suggestions\\\\display\")",
       "Bash(if exist \"app\\\\api\\\\suggestions\\\\display\\\\route.ts\" del \"app\\\\api\\\\suggestions\\\\display\\\\route.ts\")",
       "Bash(tree:*)",
-      "Bash(dir /B /S c:UsersyufujDesktopdevstudy-manage-by-gptapp)"
+      "Bash(dir /B /S c:UsersyufujDesktopdevstudy-manage-by-gptapp)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
