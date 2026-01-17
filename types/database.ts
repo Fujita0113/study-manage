@@ -148,6 +148,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      goal_level_history: {
+        Row: {
+          id: string
+          user_id: string
+          goal_type: 'bronze' | 'silver' | 'gold'
+          level: number
+          goal_content: string
+          started_at: string
+          ended_at: string | null
+          change_reason: 'initial' | 'level_up' | 'level_down'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          goal_type: 'bronze' | 'silver' | 'gold'
+          level: number
+          goal_content: string
+          started_at: string
+          ended_at?: string | null
+          change_reason: 'initial' | 'level_up' | 'level_down'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          goal_type?: 'bronze' | 'silver' | 'gold'
+          level?: number
+          goal_content?: string
+          started_at?: string
+          ended_at?: string | null
+          change_reason?: 'initial' | 'level_up' | 'level_down'
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

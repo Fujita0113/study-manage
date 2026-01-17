@@ -257,7 +257,7 @@ export async function createInitialGoals(
 
 export async function getGoalByLevel(
   level: GoalLevel,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<Goal | null> {
   const supabase = await createClient();
 
@@ -378,7 +378,7 @@ export async function getDailyRecords(
 
 export async function getDailyRecordByDate(
   date: string,
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<DailyRecord | null> {
   const supabase = await createClient();
 
@@ -465,7 +465,7 @@ export async function updateDailyRecord(
     id: data.id,
     userId: data.user_id,
     date: data.date,
-    achievementLevel: data.achievement_level,
+    achievementLevel: data.achievement_level as AchievementLevel,
     doText: data.do_text || undefined,
     journalText: data.journal_text || undefined,
     createdAt: new Date(data.created_at),
@@ -625,7 +625,7 @@ export async function getSuggestion(
  * 目標履歴スロットを全て取得（新しい順）
  */
 export async function getGoalHistorySlots(
-  userId: string = DEFAULT_USER_ID
+  userId: string
 ): Promise<GoalHistorySlot[]> {
   const supabase = await createClient();
 

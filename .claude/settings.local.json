@@ -17,7 +17,12 @@
       "Bash(tree:*)",
       "Bash(dir /B /S c:UsersyufujDesktopdevstudy-manage-by-gptapp)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(dir:*)",
+      "Bash(if not exist types mkdir types)"
     ]
   }
 }

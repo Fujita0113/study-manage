@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -108,79 +88,40 @@ export type Database = {
       }
       goal_level_history: {
         Row: {
-          id: string
-          user_id: string
-          goal_type: string
-          level: number
-          goal_content: string
-          started_at: string
+          change_reason: string
+          created_at: string
           ended_at: string | null
-          change_reason: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          goal_type: string
-          level: number
           goal_content: string
-          started_at: string
-          ended_at?: string | null
-          change_reason: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          goal_type?: string
-          level?: number
-          goal_content?: string
-          started_at?: string
-          ended_at?: string | null
-          change_reason?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      goal_history: {
-        Row: {
+          goal_type: string
           id: string
-          user_id: string
-          bronze_goal: string
-          silver_goal: string
-          gold_goal: string
-          start_date: string
-          end_date: string | null
-          change_reason: string
-          created_at: string
+          level: number
+          started_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          bronze_goal: string
-          silver_goal: string
-          gold_goal: string
-          start_date: string
-          end_date?: string | null
           change_reason: string
           created_at?: string
+          ended_at?: string | null
+          goal_content: string
+          goal_type: string
+          id?: string
+          level: number
+          started_at: string
           updated_at?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          bronze_goal?: string
-          silver_goal?: string
-          gold_goal?: string
-          start_date?: string
-          end_date?: string | null
           change_reason?: string
           created_at?: string
+          ended_at?: string | null
+          goal_content?: string
+          goal_type?: string
+          id?: string
+          level?: number
+          started_at?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -189,7 +130,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          level: 'bronze' | 'silver' | 'gold'
+          level: string
           updated_at: string
           user_id: string
         }
@@ -197,7 +138,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
-          level: 'bronze' | 'silver' | 'gold'
+          level: string
           updated_at?: string
           user_id: string
         }
@@ -205,62 +146,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          level?: 'bronze' | 'silver' | 'gold'
+          level?: string
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      streaks: {
-        Row: {
-          current_streak: number
-          id: string
-          last_recorded_date: string | null
-          longest_streak: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          current_streak?: number
-          id?: string
-          last_recorded_date?: string | null
-          longest_streak?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          current_streak?: number
-          id?: string
-          last_recorded_date?: string | null
-          longest_streak?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      suggestion_display_log: {
-        Row: {
-          created_at: string
-          display_date: string
-          id: string
-          suggestion_type: string
-          target_level: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          display_date: string
-          id?: string
-          suggestion_type: string
-          target_level?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          display_date?: string
-          id?: string
-          suggestion_type?: string
-          target_level?: string | null
           user_id?: string
         }
         Relationships: []
@@ -432,11 +319,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

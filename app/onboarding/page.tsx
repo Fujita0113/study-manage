@@ -1,14 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 /**
- * 初期目標設定画面
- * 初回ログイン時に3つの目標を設定する
+ * 初期目標設定フォームコンポーネント
  */
-export default function OnboardingPage() {
-  const router = useRouter();
+function OnboardingForm() {
   const searchParams = useSearchParams();
   const [bronze, setBronze] = useState('');
   const [silver, setSilver] = useState('');
@@ -17,14 +16,14 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [debugMode, setDebugMode] = useState(false);
-  
+
   // デバッグモードのチェック（URLパラメータまたは開発環境）
   useEffect(() => {
     // URLパラメータでデバッグモードを有効化
     const urlDebug = searchParams.get('debug') === 'true';
     // 開発環境の判定（localhostまたは127.0.0.1）
-    const isDev = typeof window !== 'undefined' && 
-                  (window.location.hostname === 'localhost' || 
+    const isDev = typeof window !== 'undefined' &&
+                  (window.location.hostname === 'localhost' ||
                    window.location.hostname === '127.0.0.1');
     const isDebug = urlDebug || isDev;
     setDebugMode(isDebug);
@@ -111,11 +110,11 @@ export default function OnboardingPage() {
       console.log('[Onboarding] Success timestamp:', new Date().toISOString());
       console.log('[Onboarding] Current URL:', window.location.href);
       console.log('[Onboarding] Debug mode:', debugMode);
-      
+
       // 成功メッセージを表示
       setSuccessMessage('目標の保存に成功しました！');
       setIsLoading(false);
-      
+
       // デバッグモードの場合はリダイレクトを無効化または大幅に遅延
       if (debugMode) {
         console.log('[Onboarding] DEBUG MODE: Redirect disabled. Check console and server logs.');
@@ -142,121 +141,133 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
-        {/* タイトル */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-3">
-            目標を設定しましょう
-          </h1>
-          <p className="text-slate-600">
-            学習を続けるために、3つのレベルの目標を設定します。
-            <br />
-            Bronze（最低限）、Silver（計画通り）、Gold（期待以上）の順に設定してください。
-          </p>
+    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
+      {/* タイトル */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-slate-800 mb-3">
+          目標を設定しましょう
+        </h1>
+        <p className="text-slate-600">
+          学習を続けるために、3つのレベルの目標を設定します。
+          <br />
+          Bronze（最低限）、Silver（計画通り）、Gold（期待以上）の順に設定してください。
+        </p>
+      </div>
+
+      {/* フォーム */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Bronze目標 */}
+        <div>
+          <label htmlFor="bronze" className="block text-sm font-medium text-slate-700 mb-2">
+            <span className="inline-block px-3 py-1 bg-bronze text-white rounded-md mr-2">
+              Bronze
+            </span>
+            最低限の目標
+          </label>
+          <input
+            type="text"
+            id="bronze"
+            value={bronze}
+            onChange={(e) => setBronze(e.target.value)}
+            placeholder="例：30分だけ座って作業する"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bronze focus:border-transparent"
+            disabled={isLoading}
+          />
         </div>
 
-        {/* フォーム */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Bronze目標 */}
-          <div>
-            <label htmlFor="bronze" className="block text-sm font-medium text-slate-700 mb-2">
-              <span className="inline-block px-3 py-1 bg-bronze text-white rounded-md mr-2">
-                Bronze
-              </span>
-              最低限の目標
-            </label>
-            <input
-              type="text"
-              id="bronze"
-              value={bronze}
-              onChange={(e) => setBronze(e.target.value)}
-              placeholder="例：30分だけ座って作業する"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bronze focus:border-transparent"
-              disabled={isLoading}
-            />
+        {/* Silver目標 */}
+        <div>
+          <label htmlFor="silver" className="block text-sm font-medium text-slate-700 mb-2">
+            <span className="inline-block px-3 py-1 bg-silver text-white rounded-md mr-2">
+              Silver
+            </span>
+            計画通りの目標
+          </label>
+          <input
+            type="text"
+            id="silver"
+            value={silver}
+            onChange={(e) => setSilver(e.target.value)}
+            placeholder="例：1機能を完成させる"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-silver focus:border-transparent"
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Gold目標 */}
+        <div>
+          <label htmlFor="gold" className="block text-sm font-medium text-slate-700 mb-2">
+            <span className="inline-block px-3 py-1 bg-gold text-white rounded-md mr-2">
+              Gold
+            </span>
+            期待以上の目標
+          </label>
+          <input
+            type="text"
+            id="gold"
+            value={gold}
+            onChange={(e) => setGold(e.target.value)}
+            placeholder="例：リファクタリングまで完了する"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
           </div>
+        )}
 
-          {/* Silver目標 */}
-          <div>
-            <label htmlFor="silver" className="block text-sm font-medium text-slate-700 mb-2">
-              <span className="inline-block px-3 py-1 bg-silver text-white rounded-md mr-2">
-                Silver
-              </span>
-              計画通りの目標
-            </label>
-            <input
-              type="text"
-              id="silver"
-              value={silver}
-              onChange={(e) => setSilver(e.target.value)}
-              placeholder="例：1機能を完成させる"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-silver focus:border-transparent"
-              disabled={isLoading}
-            />
+        {/* 成功メッセージ（デバッグモード時） */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <div className="font-medium mb-2">{successMessage}</div>
+            {debugMode && (
+              <div className="text-sm mt-2">
+                <p className="mb-2">デバッグモードが有効です。リダイレクトは10秒後に実行されます。</p>
+                <p className="text-xs text-green-600">
+                  ログを確認してください（ブラウザのコンソールとサーバーのターミナル）
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('[Onboarding] Manual redirect triggered');
+                    window.location.href = '/';
+                  }}
+                  className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                >
+                  手動でリダイレクト
+                </button>
+              </div>
+            )}
           </div>
+        )}
 
-          {/* Gold目標 */}
-          <div>
-            <label htmlFor="gold" className="block text-sm font-medium text-slate-700 mb-2">
-              <span className="inline-block px-3 py-1 bg-gold text-white rounded-md mr-2">
-                Gold
-              </span>
-              期待以上の目標
-            </label>
-            <input
-              type="text"
-              id="gold"
-              value={gold}
-              onChange={(e) => setGold(e.target.value)}
-              placeholder="例：リファクタリングまで完了する"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
-              disabled={isLoading}
-            />
-          </div>
+        {/* 保存ボタン */}
+        <button
+          type="submit"
+          disabled={!isFormValid || isLoading}
+          className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          {isLoading ? '保存中...' : '目標を保存して開始'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
-          {/* エラーメッセージ */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          {/* 成功メッセージ（デバッグモード時） */}
-          {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-              <div className="font-medium mb-2">{successMessage}</div>
-              {debugMode && (
-                <div className="text-sm mt-2">
-                  <p className="mb-2">デバッグモードが有効です。リダイレクトは10秒後に実行されます。</p>
-                  <p className="text-xs text-green-600">
-                    ログを確認してください（ブラウザのコンソールとサーバーのターミナル）
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      console.log('[Onboarding] Manual redirect triggered');
-                      window.location.href = '/';
-                    }}
-                    className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                  >
-                    手動でリダイレクト
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 保存ボタン */}
-          <button
-            type="submit"
-            disabled={!isFormValid || isLoading}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? '保存中...' : '目標を保存して開始'}
-          </button>
-        </form>
-      </div>
+/**
+ * 初期目標設定画面
+ * 初回ログイン時に3つの目標を設定する
+ */
+export default function OnboardingPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+      <Suspense fallback={<div className="text-center">読み込み中...</div>}>
+        <OnboardingForm />
+      </Suspense>
     </div>
   );
 }
