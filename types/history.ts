@@ -25,3 +25,25 @@ export interface GoalLevelHistoryRecord {
   created_at: string;
   updated_at: string;
 }
+
+// 棒グラフのセグメント（レベル期間ごと）
+export interface LevelSegment {
+  goalType: 'bronze' | 'silver' | 'gold';
+  level: number;
+  goalContent: string;
+  startedAt: string;
+  endedAt: string | null;
+  startX: number;
+  width: number;
+}
+
+// 期間ラベル用（<->形式）
+export interface PeriodLabel {
+  id: string;
+  goalType: 'bronze' | 'silver' | 'gold';
+  label: string;
+  changeReason: 'level_up' | 'level_down';
+  startX: number;
+  endX: number;
+  row: number;
+}
