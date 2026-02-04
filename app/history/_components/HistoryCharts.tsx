@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { LineChart, Line, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { AchievementData, GoalLevelHistoryRecord, LevelSegment, PeriodLabel } from '@/types/history';
 
@@ -70,19 +70,30 @@ const calculateSegments = (
 };
 
 // 期間ラベルを計算（重なり回避のrow割り当て込み）
+// レベル変更イベントの「直前のレコードの期間」にラベルを表示する
 const calculatePeriodLabels = (
   levelChanges: GoalLevelHistoryRecord[],
   startDate: Date
 ): PeriodLabel[] => {
-  const events = levelChanges.filter(lc => lc.change_reason !== 'initial');
   const labels: PeriodLabel[] = [];
   const rowEndPositions: number[] = [];
 
+  // change_reasonがlevel_upまたはlevel_downのイベントを処理
+  const events = levelChanges.filter(lc => lc.change_reason !== 'initial');
+
   for (const event of events) {
-    const startX = getXPosition(event.started_at, startDate);
-    const endX = event.ended_at
-      ? getXPosition(event.ended_at, startDate)
-      : getXPosition(new Date().toISOString(), startDate);
+    // 同じgoal_typeの直前のレコード（ended_atがnullでないもの）を探す
+    const previousRecord = levelChanges.find(
+      lc => lc.goal_type === event.goal_type &&
+            lc.ended_at !== null &&
+            new Date(lc.ended_at).getTime() < new Date(event.started_at).getTime()
+    );
+
+    if (!previousRecord || !previousRecord.ended_at) continue;
+
+    // 直前のレコードの期間にラベルを表示
+    const startX = getXPosition(previousRecord.started_at, startDate);
+    const endX = getXPosition(previousRecord.ended_at, startDate);
 
     // 空いているrowを探す
     let row = 0;
@@ -92,12 +103,12 @@ const calculatePeriodLabels = (
     rowEndPositions[row] = endX;
 
     const label = getEvaluationLabel(event);
-    if (label && (event.change_reason === 'level_up' || event.change_reason === 'level_down')) {
+    if (label) {
       labels.push({
         id: event.id,
         goalType: event.goal_type,
         label,
-        changeReason: event.change_reason,
+        changeReason: event.change_reason as 'level_up' | 'level_down',
         startX,
         endX,
         row,
@@ -147,10 +158,12 @@ export default function HistoryCharts() {
     fetchData();
   }, []);
 
-  // 開始日を計算
-  const startDate = levelChanges.length > 0
-    ? new Date(levelChanges[0].started_at.split('T')[0])
-    : new Date();
+  // 開始日を計算（メモ化してuseEffectの不要な再実行を防ぐ）
+  const startDate = useMemo(() => {
+    return levelChanges.length > 0
+      ? new Date(levelChanges[0].started_at.split('T')[0])
+      : new Date();
+  }, [levelChanges]);
 
   // 終了日（今日）を計算
   const endDate = new Date();

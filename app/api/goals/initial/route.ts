@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth/server';
-import { createInitialGoals } from '@/lib/db';
+import { createInitialGoals, createGoalTodos, getGoals } from '@/lib/db';
 
 /**
  * 初期目標を一括保存するAPI
@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     // 2. リクエストボディを取得
     console.log('[API] Parsing request body...');
     const body = await request.json();
-    const { bronze, silver, gold } = body;
-    console.log('[API] Request body:', { bronze, silver, gold });
+    const { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos } = body;
+    console.log('[API] Request body:', { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos });
 
     // 3. バリデーション
     if (!bronze || !silver || !gold) {
@@ -137,6 +137,22 @@ export async function POST(request: NextRequest) {
       count: savedGoals.length,
       goals: savedGoals.map(g => ({ level: g.level, id: g.id, created_at: g.created_at }))
     });
+
+    // 5.5. TODOリストを作成（新形式で送信された場合）
+    if (bronzeTodos && silverTodos && goldTodos) {
+      console.log('[API] Creating goal todos...');
+      const goals = await getGoals(user.id);
+
+      for (const goal of goals) {
+        const todos = goal.level === 'bronze' ? bronzeTodos :
+                      goal.level === 'silver' ? silverTodos : goldTodos;
+
+        if (Array.isArray(todos) && todos.length > 0) {
+          await createGoalTodos(goal.id, todos);
+          console.log(`[API] Created ${todos.length} todos for ${goal.level} goal`);
+        }
+      }
+    }
 
     // 6. 成功レスポンス
     const totalTime = Date.now() - startTime;

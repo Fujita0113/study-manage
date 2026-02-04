@@ -3,15 +3,22 @@
 import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { TodoList } from '@/components/todo';
+import { GoalLevel } from '@/types';
+
+interface TodoItem {
+  id?: string;
+  content: string;
+}
 
 /**
  * 初期目標設定フォームコンポーネント
  */
 function OnboardingForm() {
   const searchParams = useSearchParams();
-  const [bronze, setBronze] = useState('');
-  const [silver, setSilver] = useState('');
-  const [gold, setGold] = useState('');
+  const [bronzeTodos, setBronzeTodos] = useState<TodoItem[]>([]);
+  const [silverTodos, setSilverTodos] = useState<TodoItem[]>([]);
+  const [goldTodos, setGoldTodos] = useState<TodoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -33,19 +40,19 @@ function OnboardingForm() {
     }
   }, [searchParams]);
 
-  // 全ての目標が入力されているかチェック
-  const isFormValid = bronze.trim() && silver.trim() && gold.trim();
+  // 全ての目標が1つ以上入力されているかチェック
+  const isFormValid = bronzeTodos.length > 0 && silverTodos.length > 0 && goldTodos.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('[Onboarding] handleSubmit called');
     e.preventDefault();
 
-    console.log('[Onboarding] Form values:', { bronze, silver, gold });
+    console.log('[Onboarding] Form values:', { bronzeTodos, silverTodos, goldTodos });
     console.log('[Onboarding] isFormValid:', isFormValid);
 
     if (!isFormValid) {
       console.log('[Onboarding] Form validation failed');
-      setError('すべての目標を入力してください');
+      setError('各レベルに少なくとも1つのTODOを設定してください');
       return;
     }
 
@@ -61,9 +68,13 @@ function OnboardingForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          bronze: bronze.trim(),
-          silver: silver.trim(),
-          gold: gold.trim(),
+          bronze: bronzeTodos.map(t => t.content).join('\n'),
+          silver: silverTodos.map(t => t.content).join('\n'),
+          gold: goldTodos.map(t => t.content).join('\n'),
+          // TODOリストも送信（将来の拡張用）
+          bronzeTodos: bronzeTodos.map(t => t.content),
+          silverTodos: silverTodos.map(t => t.content),
+          goldTodos: goldTodos.map(t => t.content),
         }),
       });
 
@@ -140,6 +151,30 @@ function OnboardingForm() {
     }
   };
 
+  const levelConfig: Record<GoalLevel, { label: string; description: string; color: string; bgColor: string; placeholder: string }> = {
+    bronze: {
+      label: 'Bronze',
+      description: '最低限の目標',
+      color: 'text-amber-700',
+      bgColor: 'bg-amber-50',
+      placeholder: '例：30分だけ座って作業する',
+    },
+    silver: {
+      label: 'Silver',
+      description: '計画通りの目標',
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-100',
+      placeholder: '例：1機能を完成させる',
+    },
+    gold: {
+      label: 'Gold',
+      description: '期待以上の目標',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      placeholder: '例：リファクタリングまで完了する',
+    },
+  };
+
   return (
     <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
       {/* タイトル */}
@@ -150,65 +185,59 @@ function OnboardingForm() {
         <p className="text-slate-600">
           学習を続けるために、3つのレベルの目標を設定します。
           <br />
-          Bronze（最低限）、Silver（計画通り）、Gold（期待以上）の順に設定してください。
+          各レベルには複数のTODOを設定できます。
         </p>
       </div>
 
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Bronze目標 */}
-        <div>
-          <label htmlFor="bronze" className="block text-sm font-medium text-slate-700 mb-2">
-            <span className="inline-block px-3 py-1 bg-bronze text-white rounded-md mr-2">
+        <div className={`rounded-lg ${levelConfig.bronze.bgColor} p-4`}>
+          <div className="mb-3">
+            <span className={`inline-block px-3 py-1 bg-bronze text-white rounded-md mr-2 text-sm font-medium`}>
               Bronze
             </span>
-            最低限の目標
-          </label>
-          <input
-            type="text"
-            id="bronze"
-            value={bronze}
-            onChange={(e) => setBronze(e.target.value)}
-            placeholder="例：30分だけ座って作業する"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bronze focus:border-transparent"
+            <span className="text-sm text-slate-600">{levelConfig.bronze.description}</span>
+          </div>
+          <TodoList
+            todos={bronzeTodos}
+            onChange={setBronzeTodos}
+            maxItems={5}
+            placeholder={levelConfig.bronze.placeholder}
             disabled={isLoading}
           />
         </div>
 
         {/* Silver目標 */}
-        <div>
-          <label htmlFor="silver" className="block text-sm font-medium text-slate-700 mb-2">
-            <span className="inline-block px-3 py-1 bg-silver text-white rounded-md mr-2">
+        <div className={`rounded-lg ${levelConfig.silver.bgColor} p-4`}>
+          <div className="mb-3">
+            <span className={`inline-block px-3 py-1 bg-silver text-white rounded-md mr-2 text-sm font-medium`}>
               Silver
             </span>
-            計画通りの目標
-          </label>
-          <input
-            type="text"
-            id="silver"
-            value={silver}
-            onChange={(e) => setSilver(e.target.value)}
-            placeholder="例：1機能を完成させる"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-silver focus:border-transparent"
+            <span className="text-sm text-slate-600">{levelConfig.silver.description}</span>
+          </div>
+          <TodoList
+            todos={silverTodos}
+            onChange={setSilverTodos}
+            maxItems={5}
+            placeholder={levelConfig.silver.placeholder}
             disabled={isLoading}
           />
         </div>
 
         {/* Gold目標 */}
-        <div>
-          <label htmlFor="gold" className="block text-sm font-medium text-slate-700 mb-2">
-            <span className="inline-block px-3 py-1 bg-gold text-white rounded-md mr-2">
+        <div className={`rounded-lg ${levelConfig.gold.bgColor} p-4`}>
+          <div className="mb-3">
+            <span className={`inline-block px-3 py-1 bg-gold text-white rounded-md mr-2 text-sm font-medium`}>
               Gold
             </span>
-            期待以上の目標
-          </label>
-          <input
-            type="text"
-            id="gold"
-            value={gold}
-            onChange={(e) => setGold(e.target.value)}
-            placeholder="例：リファクタリングまで完了する"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
+            <span className="text-sm text-slate-600">{levelConfig.gold.description}</span>
+          </div>
+          <TodoList
+            todos={goldTodos}
+            onChange={setGoldTodos}
+            maxItems={5}
+            placeholder={levelConfig.gold.placeholder}
             disabled={isLoading}
           />
         </div>

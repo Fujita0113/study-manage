@@ -41,7 +41,7 @@ export async function getGoalsAction(userId: string): Promise<Goal[]> {
     id: row.id,
     userId: row.user_id,
     level: row.level as GoalLevel,
-    description: row.description,
+    description: row.description || null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   }));
@@ -73,7 +73,7 @@ export async function updateGoalAction(
     id: row.id,
     userId: row.user_id,
     level: row.level as GoalLevel,
-    description: row.description,
+    description: row.description || null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

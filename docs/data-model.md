@@ -52,7 +52,7 @@ interface Goal {
   id: string;                    // UUID
   user_id: string;               // 外部キー: User.id
   level: GoalLevel;              // 目標レベル
-  description: string;           // 目標内容
+  description: string;           // 目標内容（廃止予定：後方互換性のため残存）
   created_at: Date;              // 作成日時
   updated_at: Date;              // 最終更新日時
 }
@@ -65,7 +65,7 @@ interface Goal {
 | `id` | string (UUID) | ✓ | - | 自動生成 |
 | `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
 | `level` | GoalLevel | ✓ | - | 'bronze', 'silver', 'gold' のいずれか |
-| `description` | string | ✓ | - | 1-500文字 |
+| `description` | string | - | null | **廃止予定**。1-500文字。移行後は`goal_todos`を使用 |
 | `created_at` | Date | ✓ | 現在時刻 | - |
 | `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
 
@@ -74,9 +74,89 @@ interface Goal {
 - 1ユーザーにつき各レベル1つずつ（合計3つ）の目標を持つ
 - UNIQUE制約: `(user_id, level)`
 
+#### 備考
+
+- `description`フィールドは廃止予定。新規登録では使用せず、`goal_todos`テーブルを使用する
+- 既存データ移行後、`description`はNULL許可に変更
+
 ---
 
-### 3. DailyRecord（日次記録）
+### 3. GoalTodo（目標TODO）
+
+各目標（Gold/Silver/Bronze）に紐づくTODOを管理します。
+
+#### TypeScript型定義
+
+```typescript
+interface GoalTodo {
+  id: string;                    // UUID
+  goal_id: string;               // 外部キー: Goal.id
+  content: string;               // TODO内容
+  sort_order: number;            // 表示順（追加順）
+  created_at: Date;              // 作成日時
+  updated_at: Date;              // 最終更新日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `goal_id` | string (UUID) | ✓ | - | 外部キー制約（Goal.id） |
+| `content` | string | ✓ | - | 1-500文字 |
+| `sort_order` | number | ✓ | 0 | 0以上の整数 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+| `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
+
+#### 制約
+
+- 1つの目標（Goal）に対して複数のTODOを持てる（上限なし）
+- 各目標には最低1つのTODOが必要（アプリケーション側でバリデーション）
+
+---
+
+### 4. OtherTodo（その他TODO）
+
+「その他」カテゴリのTODOを管理します。目標レベル（Gold/Silver/Bronze）とは独立して、日々の達成項目を記録できます。
+
+#### TypeScript型定義
+
+```typescript
+interface OtherTodo {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  content: string;               // TODO内容
+  is_archived: boolean;          // アーカイブ状態
+  last_achieved_at?: Date;       // 最後に達成した日時
+  created_at: Date;              // 作成日時
+  updated_at: Date;              // 最終更新日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `content` | string | ✓ | - | 1-500文字 |
+| `is_archived` | boolean | ✓ | false | true/false |
+| `last_achieved_at` | Date | - | null | 達成時に更新 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+| `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
+
+#### 特徴
+
+- 達成度（Bronze/Silver/Gold）の判定には**影響しない**
+- 一度登録したTODOは次回以降の日報登録でも表示される（永続化）
+- `is_archived = true`のTODOは日報登録画面で非表示
+- 表示順は`last_achieved_at`降順（最後に達成した日付順）
+- 同名のTODOを入力した場合、アーカイブ済みなら復活（`is_archived = false`に更新）
+
+---
+
+### 5. DailyRecord（日次記録）
 
 毎日の学習内容と達成レベルを記録します。
 
@@ -92,7 +172,7 @@ interface DailyRecord {
   achievement_level: AchievementLevel; // 達成レベル
 
   // 記録内容
-  do_text?: string;              // 学習内容サマリー
+  do_text?: string;              // 学習内容サマリー（廃止予定）
   journal_text?: string;         // 自由記述（Journal）
 
   created_at: Date;              // 作成日時
@@ -108,7 +188,7 @@ interface DailyRecord {
 | `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
 | `date` | string | ✓ | - | YYYY-MM-DD形式、UNIQUE制約（user_id, date） |
 | `achievement_level` | AchievementLevel | ✓ | 'none' | 'none', 'bronze', 'silver', 'gold' のいずれか |
-| `do_text` | string | - | null | 最大5000文字。学習内容サマリー（箇条書き形式） |
+| `do_text` | string | - | null | **廃止予定**。最大5000文字。移行後は`daily_todo_records`を使用 |
 | `journal_text` | string | - | null | 最大5000文字。自由記述（感想や気づき） |
 | `created_at` | Date | ✓ | 現在時刻 | - |
 | `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
@@ -116,9 +196,8 @@ interface DailyRecord {
 #### フィールドの使用状況
 
 **do_text（学習内容サマリー）:**
-- 記録画面で入力
-- 箇条書き形式で複数項目を記録
-- ホーム画面のデイリーレポートカードに最大3件まで表示
+- **廃止予定**。新規登録では使用しない
+- 既存データは移行時に`other_todos`と`daily_todo_records`へ変換
 
 **journal_text（自由記述）:**
 - 記録画面で入力
@@ -132,7 +211,50 @@ interface DailyRecord {
 
 ---
 
-### 4. SuggestionDisplayLog（提案バナー表示履歴）
+### 6. DailyTodoRecord（日次TODO達成記録）
+
+各日のTODO達成状態を記録します。
+
+#### TypeScript型定義
+
+```typescript
+type TodoType = 'goal' | 'other';
+
+interface DailyTodoRecord {
+  id: string;                    // UUID
+  daily_record_id: string;       // 外部キー: DailyRecord.id
+  todo_type: TodoType;           // TODOの種類
+  todo_id: string;               // goal_todos.id または other_todos.id
+  is_achieved: boolean;          // 達成状態
+  created_at: Date;              // 作成日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `daily_record_id` | string (UUID) | ✓ | - | 外部キー制約（DailyRecord.id） |
+| `todo_type` | TodoType | ✓ | - | 'goal' または 'other' |
+| `todo_id` | string (UUID) | ✓ | - | goal_todos.id または other_todos.id |
+| `is_achieved` | boolean | ✓ | false | true/false |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+
+#### 制約
+
+- UNIQUE制約: `(daily_record_id, todo_type, todo_id)` — 同じ日の同じTODOは1レコードのみ
+
+#### 用途
+
+- 各日にどのTODOを達成したかを記録
+- `todo_type = 'goal'`の場合、`todo_id`は`goal_todos.id`を参照
+- `todo_type = 'other'`の場合、`todo_id`は`other_todos.id`を参照
+- ホーム画面のカード表示や日詳細画面での達成TODO一覧表示に使用
+
+---
+
+### 7. SuggestionDisplayLog（提案バナー表示履歴）
 
 提案バナーの表示履歴を記録し、同日の重複表示を防ぎます。
 
@@ -181,8 +303,11 @@ interface SuggestionDisplayLog {
 ```mermaid
 erDiagram
     User ||--o{ Goal : "has"
+    User ||--o{ OtherTodo : "has"
     User ||--o{ DailyRecord : "has"
     User ||--o{ SuggestionDisplayLog : "has"
+    Goal ||--o{ GoalTodo : "has"
+    DailyRecord ||--o{ DailyTodoRecord : "has"
 
     User {
         string id PK
@@ -200,6 +325,25 @@ erDiagram
         Date updated_at
     }
 
+    GoalTodo {
+        string id PK
+        string goal_id FK
+        string content
+        int sort_order
+        Date created_at
+        Date updated_at
+    }
+
+    OtherTodo {
+        string id PK
+        string user_id FK
+        string content
+        boolean is_archived
+        Date last_achieved_at
+        Date created_at
+        Date updated_at
+    }
+
     DailyRecord {
         string id PK
         string user_id FK
@@ -209,6 +353,15 @@ erDiagram
         string journal_text
         Date created_at
         Date updated_at
+    }
+
+    DailyTodoRecord {
+        string id PK
+        string daily_record_id FK
+        TodoType todo_type
+        string todo_id
+        boolean is_achieved
+        Date created_at
     }
 
     SuggestionDisplayLog {
@@ -231,11 +384,29 @@ erDiagram
 - **外部キー**: `Goal.user_id` → `User.id`
 - **削除時の動作**: `ON DELETE CASCADE`（ユーザー削除時に関連する目標も削除）
 
+### Goal → GoalTodo
+- **関係**: 1対多
+- **説明**: 1つの目標は複数のTODOを持つ（上限なし、最低1つ必要）
+- **外部キー**: `GoalTodo.goal_id` → `Goal.id`
+- **削除時の動作**: `ON DELETE CASCADE`（目標削除時に関連するTODOも削除）
+
+### User → OtherTodo
+- **関係**: 1対多
+- **説明**: 1ユーザーは複数の「その他」TODOを持つ
+- **外部キー**: `OtherTodo.user_id` → `User.id`
+- **削除時の動作**: `ON DELETE CASCADE`
+
 ### User → DailyRecord
 - **関係**: 1対多
 - **説明**: 1ユーザーは複数の日次記録を持つ（1日1レコード）
 - **外部キー**: `DailyRecord.user_id` → `User.id`
 - **削除時の動作**: `ON DELETE CASCADE`
+
+### DailyRecord → DailyTodoRecord
+- **関係**: 1対多
+- **説明**: 1つの日次記録は複数のTODO達成記録を持つ
+- **外部キー**: `DailyTodoRecord.daily_record_id` → `DailyRecord.id`
+- **削除時の動作**: `ON DELETE CASCADE`（日次記録削除時に関連するTODO達成記録も削除）
 
 ### User → SuggestionDisplayLog
 - **関係**: 1対多
@@ -289,11 +460,37 @@ CREATE TABLE goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   level TEXT NOT NULL CHECK (level IN ('bronze', 'silver', 'gold')),
-  description TEXT NOT NULL CHECK (char_length(description) BETWEEN 1 AND 500),
+  description TEXT CHECK (char_length(description) <= 500), -- 廃止予定、NULL許可に変更
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, level)
 );
+
+-- Goal Todos テーブル（新規）
+CREATE TABLE goal_todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  goal_id UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 500),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_goal_todos_goal_id ON goal_todos(goal_id);
+
+-- Other Todos テーブル（新規）
+CREATE TABLE other_todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 500),
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+  last_achieved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_other_todos_user_id ON other_todos(user_id);
+CREATE INDEX idx_other_todos_user_archived ON other_todos(user_id, is_archived);
 
 -- Daily Records テーブル
 CREATE TABLE daily_records (
@@ -301,12 +498,25 @@ CREATE TABLE daily_records (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   achievement_level TEXT NOT NULL DEFAULT 'none' CHECK (achievement_level IN ('none', 'bronze', 'silver', 'gold')),
-  do_text TEXT CHECK (char_length(do_text) <= 5000),
+  do_text TEXT CHECK (char_length(do_text) <= 5000), -- 廃止予定
   journal_text TEXT CHECK (char_length(journal_text) <= 5000),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, date)
 );
+
+-- Daily Todo Records テーブル（新規）
+CREATE TABLE daily_todo_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  daily_record_id UUID NOT NULL REFERENCES daily_records(id) ON DELETE CASCADE,
+  todo_type TEXT NOT NULL CHECK (todo_type IN ('goal', 'other')),
+  todo_id UUID NOT NULL,
+  is_achieved BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(daily_record_id, todo_type, todo_id)
+);
+
+CREATE INDEX idx_daily_todo_records_daily_record_id ON daily_todo_records(daily_record_id);
 
 -- Suggestion Display Log テーブル
 CREATE TABLE suggestion_display_log (
@@ -332,6 +542,8 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_goal_todos_updated_at BEFORE UPDATE ON goal_todos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_other_todos_updated_at BEFORE UPDATE ON other_todos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_daily_records_updated_at BEFORE UPDATE ON daily_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 

@@ -31,7 +31,7 @@ export interface Database {
           id: string
           user_id: string
           level: 'bronze' | 'silver' | 'gold'
-          description: string
+          description: string | null
           created_at: string
           updated_at: string
         }
@@ -39,7 +39,7 @@ export interface Database {
           id?: string
           user_id: string
           level: 'bronze' | 'silver' | 'gold'
-          description: string
+          description?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -47,7 +47,7 @@ export interface Database {
           id?: string
           user_id?: string
           level?: 'bronze' | 'silver' | 'gold'
-          description?: string
+          description?: string | null
           created_at?: string
           updated_at?: string
         }

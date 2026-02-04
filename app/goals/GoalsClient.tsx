@@ -3,9 +3,15 @@
 // 目標編集画面の Client Component
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Goal, GoalLevel, GoalChangeReason } from '@/types';
+import { TodoList } from '@/components/todo';
+import type { Goal, GoalLevel, GoalChangeReason, GoalTodo } from '@/types';
+
+interface TodoItem {
+  id?: string;
+  content: string;
+}
 
 interface GoalsClientProps {
   initialGoals: Goal[];
@@ -16,56 +22,116 @@ interface GoalsClientProps {
 export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClientProps) {
   const router = useRouter();
 
-  const [bronzeDesc, setBronzeDesc] = useState(
-    initialGoals.find(g => g.level === 'bronze')?.description || ''
-  );
-  const [silverDesc, setSilverDesc] = useState(
-    initialGoals.find(g => g.level === 'silver')?.description || ''
-  );
-  const [goldDesc, setGoldDesc] = useState(
-    initialGoals.find(g => g.level === 'gold')?.description || ''
-  );
+  // 各レベルのTODOリスト状態
+  const [bronzeTodos, setBronzeTodos] = useState<TodoItem[]>([]);
+  const [silverTodos, setSilverTodos] = useState<TodoItem[]>([]);
+  const [goldTodos, setGoldTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // goal_idのマッピング
+  const bronzeGoal = initialGoals.find(g => g.level === 'bronze');
+  const silverGoal = initialGoals.find(g => g.level === 'silver');
+  const goldGoal = initialGoals.find(g => g.level === 'gold');
 
   // 編集可能かどうかを判定
   const canEditBronze = !editParam || editParam === 'bronze' || editParam === 'silver' || editParam === 'gold' || editParam === 'all';
   const canEditSilver = !editParam || editParam === 'silver' || editParam === 'gold' || editParam === 'all';
   const canEditGold = !editParam || editParam === 'gold' || editParam === 'all';
 
+  // 初期ロード時にTODOを取得
+  useEffect(() => {
+    async function loadTodos() {
+      try {
+        const response = await fetch('/api/goals/todos');
+        if (!response.ok) {
+          throw new Error('Failed to fetch todos');
+        }
+        const data = await response.json() as Record<GoalLevel, GoalTodo[]>;
+
+        setBronzeTodos(data.bronze.map(t => ({ id: t.id, content: t.content })));
+        setSilverTodos(data.silver.map(t => ({ id: t.id, content: t.content })));
+        setGoldTodos(data.gold.map(t => ({ id: t.id, content: t.content })));
+      } catch (error) {
+        console.error('Failed to load todos:', error);
+        // フォールバック: 既存のdescriptionを1つのTODOとして表示
+        setBronzeTodos(bronzeGoal?.description ? [{ content: bronzeGoal.description }] : []);
+        setSilverTodos(silverGoal?.description ? [{ content: silverGoal.description }] : []);
+        setGoldTodos(goldGoal?.description ? [{ content: goldGoal.description }] : []);
+      } finally {
+        setInitialLoading(false);
+      }
+    }
+    loadTodos();
+  }, [bronzeGoal?.description, silverGoal?.description, goldGoal?.description]);
+
+  // 全てのレベルに1つ以上のTODOがあるかチェック
+  const isFormValid = bronzeTodos.length > 0 && silverTodos.length > 0 && goldTodos.length > 0;
+
   // 保存処理
   const handleSave = async () => {
-    if (!bronzeDesc.trim() || !silverDesc.trim() || !goldDesc.trim()) {
-      alert('すべての目標を入力してください');
+    if (!isFormValid) {
+      alert('各レベルに少なくとも1つのTODOを設定してください');
       return;
     }
 
-    // 編集可能な目標のリストを計算
-    const editableGoals: GoalLevel[] = [];
-    if (canEditBronze) editableGoals.push('bronze');
-    if (canEditSilver) editableGoals.push('silver');
-    if (canEditGold) editableGoals.push('gold');
-
-    console.log('Editable goals:', editableGoals);
-
     setLoading(true);
     try {
-      // API Route 経由で更新
+      // 各目標のTODOを更新
+      const updates: Promise<Response>[] = [];
+
+      if (canEditBronze && bronzeGoal) {
+        updates.push(
+          fetch(`/api/goals/${bronzeGoal.id}/todos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ todos: bronzeTodos }),
+          })
+        );
+      }
+
+      if (canEditSilver && silverGoal) {
+        updates.push(
+          fetch(`/api/goals/${silverGoal.id}/todos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ todos: silverTodos }),
+          })
+        );
+      }
+
+      if (canEditGold && goldGoal) {
+        updates.push(
+          fetch(`/api/goals/${goldGoal.id}/todos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ todos: goldTodos }),
+          })
+        );
+      }
+
+      const responses = await Promise.all(updates);
+      const allOk = responses.every(r => r.ok);
+
+      if (!allOk) {
+        throw new Error('Failed to update some goals');
+      }
+
+      // 目標履歴の更新（descriptionも更新）
       const response = await fetch('/api/goals', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bronze: bronzeDesc.trim(),
-          silver: silverDesc.trim(),
-          gold: goldDesc.trim(),
-          editableGoals,
+          bronze: bronzeTodos.map(t => t.content).join('\n'),
+          silver: silverTodos.map(t => t.content).join('\n'),
+          gold: goldTodos.map(t => t.content).join('\n'),
+          editableGoals: getEditableGoals(),
           changeReason: determineChangeReason(editParam),
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update goals');
+        throw new Error('Failed to update goal history');
       }
 
       router.push('/');
@@ -76,6 +142,14 @@ export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClient
       setLoading(false);
     }
   };
+
+  function getEditableGoals(): GoalLevel[] {
+    const editableGoals: GoalLevel[] = [];
+    if (canEditBronze) editableGoals.push('bronze');
+    if (canEditSilver) editableGoals.push('silver');
+    if (canEditGold) editableGoals.push('gold');
+    return editableGoals;
+  }
 
   /**
    * editパラメータから変更理由を判定
@@ -95,13 +169,27 @@ export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClient
     }
   }
 
+  if (initialLoading) {
+    return (
+      <AppLayout pageTitle="目標編集" streakDays={streakDays}>
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-center min-h-[300px]">
+              <p className="text-slate-600">読み込み中...</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout pageTitle="目標編集" streakDays={streakDays}>
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-slate-800 mb-2">目標の編集</h2>
           <p className="text-sm text-slate-600 mb-6">
-            3段階の目標を設定してください。Bronze（最低限）、Silver（計画通り）、Gold（期待以上）の順で難易度が上がります。
+            3段階の目標を設定してください。各レベルに複数のTODOを設定できます。
           </p>
 
           {/* 権限に応じた説明メッセージ */}
@@ -117,66 +205,57 @@ export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClient
 
           <div className="space-y-6">
             {/* Bronze目標 */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Bronze目標（最低限）
+            <div className="rounded-lg bg-amber-50 p-4">
+              <div className="mb-3">
+                <span className="inline-block px-3 py-1 bg-bronze text-white rounded-md mr-2 text-sm font-medium">
+                  Bronze
+                </span>
+                <span className="text-sm text-slate-600">最低限の目標</span>
                 {!canEditBronze && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
-              </label>
-              <input
-                type="text"
-                value={bronzeDesc}
-                onChange={e => setBronzeDesc(e.target.value)}
+              </div>
+              <TodoList
+                todos={bronzeTodos}
+                onChange={setBronzeTodos}
+                maxItems={5}
+                placeholder="例：30分だけ座って作業する"
                 disabled={!canEditBronze || loading}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  !canEditBronze ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                }`}
-                placeholder="例: 30分だけプログラミングする"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                どんなに忙しくても、これだけは達成したい最低ラインの目標
-              </p>
             </div>
 
             {/* Silver目標 */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Silver目標（計画通り）
+            <div className="rounded-lg bg-gray-100 p-4">
+              <div className="mb-3">
+                <span className="inline-block px-3 py-1 bg-silver text-white rounded-md mr-2 text-sm font-medium">
+                  Silver
+                </span>
+                <span className="text-sm text-slate-600">計画通りの目標</span>
                 {!canEditSilver && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
-              </label>
-              <input
-                type="text"
-                value={silverDesc}
-                onChange={e => setSilverDesc(e.target.value)}
+              </div>
+              <TodoList
+                todos={silverTodos}
+                onChange={setSilverTodos}
+                maxItems={5}
+                placeholder="例：1機能を完成させる"
                 disabled={!canEditSilver || loading}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  !canEditSilver ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                }`}
-                placeholder="例: 1つの機能を完成させる"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                通常の日に達成したい、標準的な目標
-              </p>
             </div>
 
             {/* Gold目標 */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Gold目標（期待以上）
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <div className="mb-3">
+                <span className="inline-block px-3 py-1 bg-gold text-white rounded-md mr-2 text-sm font-medium">
+                  Gold
+                </span>
+                <span className="text-sm text-slate-600">期待以上の目標</span>
                 {!canEditGold && <span className="ml-2 text-xs text-slate-500">（編集不可）</span>}
-              </label>
-              <input
-                type="text"
-                value={goldDesc}
-                onChange={e => setGoldDesc(e.target.value)}
+              </div>
+              <TodoList
+                todos={goldTodos}
+                onChange={setGoldTodos}
+                maxItems={5}
+                placeholder="例：リファクタリングまで完了する"
                 disabled={!canEditGold || loading}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  !canEditGold ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                }`}
-                placeholder="例: リファクタリングまで完了させる"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                調子が良い日に目指したい、理想的な目標
-              </p>
             </div>
           </div>
 
@@ -191,7 +270,7 @@ export function GoalsClient({ initialGoals, editParam, streakDays }: GoalsClient
             </button>
             <button
               onClick={handleSave}
-              disabled={loading}
+              disabled={loading || !isFormValid}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {loading ? '更新中...' : '更新する'}

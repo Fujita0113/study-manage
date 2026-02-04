@@ -67,6 +67,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_todo_records: {
+        Row: {
+          id: string
+          daily_record_id: string
+          todo_type: string
+          todo_id: string
+          is_achieved: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          daily_record_id: string
+          todo_type: string
+          todo_id: string
+          is_achieved?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          daily_record_id?: string
+          todo_type?: string
+          todo_id?: string
+          is_achieved?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       goal_history_slots: {
         Row: {
           bronze_goal: string
@@ -145,6 +172,33 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_todos: {
+        Row: {
+          id: string
+          goal_id: string
+          content: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          goal_id: string
+          content: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          goal_id?: string
+          content?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       goal_history: {
         Row: {
           id: string
@@ -187,7 +241,7 @@ export type Database = {
       goals: {
         Row: {
           created_at: string
-          description: string
+          description: string | null
           id: string
           level: 'bronze' | 'silver' | 'gold'
           updated_at: string
@@ -195,7 +249,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description: string
+          description?: string | null
           id?: string
           level: 'bronze' | 'silver' | 'gold'
           updated_at?: string
@@ -203,11 +257,41 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string
+          description?: string | null
           id?: string
           level?: 'bronze' | 'silver' | 'gold'
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      other_todos: {
+        Row: {
+          id: string
+          user_id: string
+          content: string
+          is_archived: boolean
+          last_achieved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content?: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

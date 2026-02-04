@@ -17,6 +17,9 @@ import {
   GoalHistorySlot,
   GoalChangeReason,
   AchievementLevel,
+  GoalTodo,
+  OtherTodo,
+  DailyTodoRecord,
 } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
@@ -37,6 +40,19 @@ type GoalUpdate = Database['public']['Tables']['goals']['Update'];
 type GoalHistorySlotRow = Database['public']['Tables']['goal_history_slots']['Row'];
 type GoalHistorySlotInsert = Database['public']['Tables']['goal_history_slots']['Insert'];
 type GoalHistorySlotUpdate = Database['public']['Tables']['goal_history_slots']['Update'];
+
+// Supabaseのgoal_todosテーブルの型
+type GoalTodoRow = Database['public']['Tables']['goal_todos']['Row'];
+type GoalTodoInsert = Database['public']['Tables']['goal_todos']['Insert'];
+
+// Supabaseのother_todosテーブルの型
+type OtherTodoRow = Database['public']['Tables']['other_todos']['Row'];
+type OtherTodoInsert = Database['public']['Tables']['other_todos']['Insert'];
+type OtherTodoUpdate = Database['public']['Tables']['other_todos']['Update'];
+
+// Supabaseのdaily_todo_recordsテーブルの型
+type DailyTodoRecordRow = Database['public']['Tables']['daily_todo_records']['Row'];
+type DailyTodoRecordInsert = Database['public']['Tables']['daily_todo_records']['Insert'];
 
 // ==================== 型変換ヘルパー関数 ====================
 
@@ -64,7 +80,7 @@ function toGoal(dbGoal: GoalRow): Goal {
     id: dbGoal.id,
     userId: dbGoal.user_id,
     level: dbGoal.level as GoalLevel,
-    description: dbGoal.description,
+    description: dbGoal.description || null,
     createdAt: new Date(dbGoal.created_at),
     updatedAt: new Date(dbGoal.updated_at),
   };
@@ -85,6 +101,49 @@ function toGoalHistorySlot(dbSlot: GoalHistorySlotRow): GoalHistorySlot {
     changeReason: dbSlot.change_reason as GoalChangeReason,
     createdAt: new Date(dbSlot.created_at),
     updatedAt: new Date(dbSlot.updated_at),
+  };
+}
+
+/**
+ * Supabaseのgoal_todosテーブル形式をTypeScript型に変換
+ */
+function toGoalTodo(dbTodo: GoalTodoRow): GoalTodo {
+  return {
+    id: dbTodo.id,
+    goalId: dbTodo.goal_id,
+    content: dbTodo.content,
+    sortOrder: dbTodo.sort_order,
+    createdAt: new Date(dbTodo.created_at),
+    updatedAt: new Date(dbTodo.updated_at),
+  };
+}
+
+/**
+ * Supabaseのother_todosテーブル形式をTypeScript型に変換
+ */
+function toOtherTodo(dbTodo: OtherTodoRow): OtherTodo {
+  return {
+    id: dbTodo.id,
+    userId: dbTodo.user_id,
+    content: dbTodo.content,
+    isArchived: dbTodo.is_archived,
+    lastAchievedAt: dbTodo.last_achieved_at ? new Date(dbTodo.last_achieved_at) : undefined,
+    createdAt: new Date(dbTodo.created_at),
+    updatedAt: new Date(dbTodo.updated_at),
+  };
+}
+
+/**
+ * Supabaseのdaily_todo_recordsテーブル形式をTypeScript型に変換
+ */
+function toDailyTodoRecord(dbRecord: DailyTodoRecordRow): DailyTodoRecord {
+  return {
+    id: dbRecord.id,
+    dailyRecordId: dbRecord.daily_record_id,
+    todoType: dbRecord.todo_type as 'goal' | 'other',
+    todoId: dbRecord.todo_id,
+    isAchieved: dbRecord.is_achieved,
+    createdAt: new Date(dbRecord.created_at),
   };
 }
 
@@ -782,4 +841,362 @@ export async function endGoalHistorySlot(
   }
 
   return toGoalHistorySlot(data);
+}
+
+// ==================== Goal Todos ====================
+
+/**
+ * 指定したgoal_idに紐づくTODOリストを取得
+ */
+export async function getGoalTodos(goalId: string): Promise<GoalTodo[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('goal_todos')
+    .select('*')
+    .eq('goal_id', goalId)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch goal todos:', error);
+    return [];
+  }
+
+  return (data || []).map(toGoalTodo);
+}
+
+/**
+ * ユーザーの全目標のTODOをレベル別に取得
+ */
+export async function getGoalTodosByUserId(
+  userId: string
+): Promise<Record<GoalLevel, GoalTodo[]>> {
+  const supabase = await createClient();
+
+  // まずユーザーの全目標を取得
+  const goals = await getGoals(userId);
+
+  const result: Record<GoalLevel, GoalTodo[]> = {
+    bronze: [],
+    silver: [],
+    gold: [],
+  };
+
+  // 各目標のTODOを取得
+  for (const goal of goals) {
+    const { data, error } = await supabase
+      .from('goal_todos')
+      .select('*')
+      .eq('goal_id', goal.id)
+      .order('sort_order', { ascending: true });
+
+    if (!error && data) {
+      result[goal.level] = data.map(toGoalTodo);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 目標にTODOを一括作成
+ */
+export async function createGoalTodos(
+  goalId: string,
+  todos: string[]
+): Promise<GoalTodo[]> {
+  const supabase = await createClient();
+
+  const todosToInsert: GoalTodoInsert[] = todos.map((content, index) => ({
+    goal_id: goalId,
+    content,
+    sort_order: index,
+  }));
+
+  const { data, error } = await supabase
+    .from('goal_todos')
+    .insert(todosToInsert)
+    .select();
+
+  if (error) {
+    console.error('Failed to create goal todos:', error);
+    throw new Error(`Failed to create goal todos: ${error.message}`);
+  }
+
+  return (data || []).map(toGoalTodo);
+}
+
+/**
+ * 目標のTODOを一括更新（削除→追加方式）
+ */
+export async function updateGoalTodos(
+  goalId: string,
+  todos: { id?: string; content: string }[]
+): Promise<GoalTodo[]> {
+  const supabase = await createClient();
+
+  // 既存のTODOを削除
+  const { error: deleteError } = await supabase
+    .from('goal_todos')
+    .delete()
+    .eq('goal_id', goalId);
+
+  if (deleteError) {
+    console.error('Failed to delete existing goal todos:', deleteError);
+    throw new Error(`Failed to delete existing goal todos: ${deleteError.message}`);
+  }
+
+  // 新しいTODOを追加
+  if (todos.length === 0) {
+    return [];
+  }
+
+  return createGoalTodos(goalId, todos.map(t => t.content));
+}
+
+/**
+ * 目標のTODOを削除
+ */
+export async function deleteGoalTodo(todoId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('goal_todos')
+    .delete()
+    .eq('id', todoId);
+
+  if (error) {
+    console.error('Failed to delete goal todo:', error);
+    throw new Error(`Failed to delete goal todo: ${error.message}`);
+  }
+}
+
+// ==================== Other Todos ====================
+
+/**
+ * ユーザーのその他TODOリストを取得
+ */
+export async function getOtherTodos(
+  userId: string,
+  includeArchived: boolean = false
+): Promise<OtherTodo[]> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('other_todos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (!includeArchived) {
+    query = query.eq('is_archived', false);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch other todos:', error);
+    return [];
+  }
+
+  return (data || []).map(toOtherTodo);
+}
+
+/**
+ * その他TODOを作成
+ */
+export async function createOtherTodo(
+  userId: string,
+  content: string
+): Promise<OtherTodo> {
+  const supabase = await createClient();
+
+  const insertData: OtherTodoInsert = {
+    user_id: userId,
+    content,
+    is_archived: false,
+  };
+
+  const { data, error } = await supabase
+    .from('other_todos')
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create other todo:', error);
+    throw new Error(`Failed to create other todo: ${error.message}`);
+  }
+
+  return toOtherTodo(data);
+}
+
+/**
+ * その他TODOをアーカイブ
+ */
+export async function archiveOtherTodo(todoId: string): Promise<OtherTodo> {
+  const supabase = await createClient();
+
+  const updateData: OtherTodoUpdate = {
+    is_archived: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('other_todos')
+    .update(updateData)
+    .eq('id', todoId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to archive other todo:', error);
+    throw new Error(`Failed to archive other todo: ${error.message}`);
+  }
+
+  return toOtherTodo(data);
+}
+
+/**
+ * その他TODOをアーカイブ解除
+ */
+export async function unarchiveOtherTodo(todoId: string): Promise<OtherTodo> {
+  const supabase = await createClient();
+
+  const updateData: OtherTodoUpdate = {
+    is_archived: false,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('other_todos')
+    .update(updateData)
+    .eq('id', todoId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to unarchive other todo:', error);
+    throw new Error(`Failed to unarchive other todo: ${error.message}`);
+  }
+
+  return toOtherTodo(data);
+}
+
+/**
+ * その他TODOの最終達成日時を更新
+ */
+export async function updateOtherTodoLastAchieved(todoId: string): Promise<OtherTodo> {
+  const supabase = await createClient();
+
+  const updateData: OtherTodoUpdate = {
+    last_achieved_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('other_todos')
+    .update(updateData)
+    .eq('id', todoId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update other todo last achieved:', error);
+    throw new Error(`Failed to update other todo last achieved: ${error.message}`);
+  }
+
+  return toOtherTodo(data);
+}
+
+/**
+ * その他TODOを検索（オートコンプリート用）
+ */
+export async function searchOtherTodos(
+  userId: string,
+  query: string,
+  limit: number = 10
+): Promise<OtherTodo[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('other_todos')
+    .select('*')
+    .eq('user_id', userId)
+    .ilike('content', `%${query}%`)
+    .order('last_achieved_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Failed to search other todos:', error);
+    return [];
+  }
+
+  return (data || []).map(toOtherTodo);
+}
+
+// ==================== Daily Todo Records ====================
+
+/**
+ * 日報に紐づくTODO達成記録を取得
+ */
+export async function getDailyTodoRecords(
+  dailyRecordId: string
+): Promise<DailyTodoRecord[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('daily_todo_records')
+    .select('*')
+    .eq('daily_record_id', dailyRecordId);
+
+  if (error) {
+    console.error('Failed to fetch daily todo records:', error);
+    return [];
+  }
+
+  return (data || []).map(toDailyTodoRecord);
+}
+
+/**
+ * 日報のTODO達成記録を保存（upsert方式）
+ */
+export async function saveDailyTodoRecords(
+  dailyRecordId: string,
+  records: { todoType: 'goal' | 'other'; todoId: string; isAchieved: boolean }[]
+): Promise<void> {
+  const supabase = await createClient();
+
+  // 既存の記録を削除
+  const { error: deleteError } = await supabase
+    .from('daily_todo_records')
+    .delete()
+    .eq('daily_record_id', dailyRecordId);
+
+  if (deleteError) {
+    console.error('Failed to delete existing daily todo records:', deleteError);
+    throw new Error(`Failed to delete existing daily todo records: ${deleteError.message}`);
+  }
+
+  // 新しい記録を追加（達成されたもののみ）
+  const achievedRecords = records.filter(r => r.isAchieved);
+  if (achievedRecords.length === 0) {
+    return;
+  }
+
+  const recordsToInsert: DailyTodoRecordInsert[] = achievedRecords.map(r => ({
+    daily_record_id: dailyRecordId,
+    todo_type: r.todoType,
+    todo_id: r.todoId,
+    is_achieved: r.isAchieved,
+  }));
+
+  const { error: insertError } = await supabase
+    .from('daily_todo_records')
+    .insert(recordsToInsert);
+
+  if (insertError) {
+    console.error('Failed to save daily todo records:', insertError);
+    throw new Error(`Failed to save daily todo records: ${insertError.message}`);
+  }
 }

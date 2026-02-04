@@ -1,7 +1,13 @@
-// 日詳細画面（シンプル版）
+// 日詳細画面（TODO表示版）
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { getDailyRecordByDate, calculateStreakFromRecords } from '@/lib/db';
+import {
+  getDailyRecordByDate,
+  calculateStreakFromRecords,
+  getDailyTodoRecords,
+} from '@/lib/db';
+import { createClient } from '@/lib/supabase/server';
+import type { GoalLevel } from '@/types';
 import { requireAuth } from '@/lib/auth/server';
 import {
   formatDateJP,
@@ -9,9 +15,17 @@ import {
   getLevelBadgeClass
 } from '@/lib/utils';
 import Link from 'next/link';
+import { Check } from 'lucide-react';
 
 interface DayDetailPageProps {
   params: Promise<{ date: string }> | { date: string };
+}
+
+interface AchievedTodo {
+  id: string;
+  content: string;
+  level?: GoalLevel;
+  type: 'goal' | 'other';
 }
 
 export default async function DayDetailPage({ params }: DayDetailPageProps) {
@@ -49,6 +63,83 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
     );
   }
 
+  // 達成TODOを取得
+  const todoRecords = await getDailyTodoRecords(record.id);
+  const achievedTodos: AchievedTodo[] = [];
+
+  if (todoRecords.length > 0) {
+    const supabase = await createClient();
+
+    // Goal TODOのコンテンツを取得
+    const goalTodoIds = todoRecords
+      .filter(r => r.todoType === 'goal' && r.isAchieved)
+      .map(r => r.todoId);
+
+    if (goalTodoIds.length > 0) {
+      const { data: goalTodos } = await supabase
+        .from('goal_todos')
+        .select('id, content, goal_id')
+        .in('id', goalTodoIds);
+
+      if (goalTodos) {
+        // goal_idからlevelを取得
+        const goalIds = [...new Set(goalTodos.map(t => t.goal_id))];
+        const { data: goals } = await supabase
+          .from('goals')
+          .select('id, level')
+          .in('id', goalIds);
+
+        const goalLevelMap = new Map(goals?.map(g => [g.id, g.level as GoalLevel]) || []);
+
+        goalTodos.forEach(t => {
+          achievedTodos.push({
+            id: t.id,
+            content: t.content,
+            level: goalLevelMap.get(t.goal_id),
+            type: 'goal',
+          });
+        });
+      }
+    }
+
+    // Other TODOのコンテンツを取得
+    const otherTodoIds = todoRecords
+      .filter(r => r.todoType === 'other' && r.isAchieved)
+      .map(r => r.todoId);
+
+    if (otherTodoIds.length > 0) {
+      const { data: otherTodos } = await supabase
+        .from('other_todos')
+        .select('id, content')
+        .in('id', otherTodoIds);
+
+      if (otherTodos) {
+        otherTodos.forEach(t => {
+          achievedTodos.push({
+            id: t.id,
+            content: t.content,
+            type: 'other',
+          });
+        });
+      }
+    }
+  }
+
+  // レベル別にグループ化
+  const todosByLevel: Record<GoalLevel | 'other', AchievedTodo[]> = {
+    bronze: achievedTodos.filter(t => t.level === 'bronze'),
+    silver: achievedTodos.filter(t => t.level === 'silver'),
+    gold: achievedTodos.filter(t => t.level === 'gold'),
+    other: achievedTodos.filter(t => t.type === 'other'),
+  };
+
+  const levelConfig: Record<GoalLevel | 'other', { label: string; bgColor: string; textColor: string }> = {
+    bronze: { label: 'Bronze', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
+    silver: { label: 'Silver', bgColor: 'bg-gray-50', textColor: 'text-gray-600' },
+    gold: { label: 'Gold', bgColor: 'bg-yellow-50', textColor: 'text-yellow-600' },
+    other: { label: 'その他', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+  };
+
   return (
     <AppLayout pageTitle={`${formatDateJP(date)} の記録`} streakDays={streakDays}>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -79,12 +170,42 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
           </span>
         </div>
 
-        {/* 学習内容サマリー */}
-        {record.doText && (
+        {/* 達成TODOリスト */}
+        {achievedTodos.length > 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">学習内容サマリー</h2>
-            <p className="text-slate-700 whitespace-pre-wrap">{record.doText}</p>
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">達成したTODO</h2>
+            <div className="space-y-4">
+              {(['bronze', 'silver', 'gold', 'other'] as const).map(level => {
+                const todos = todosByLevel[level];
+                if (todos.length === 0) return null;
+                const config = levelConfig[level];
+
+                return (
+                  <div key={level} className={`rounded-lg ${config.bgColor} p-4`}>
+                    <h3 className={`font-semibold ${config.textColor} mb-2`}>
+                      {config.label}
+                    </h3>
+                    <ul className="space-y-1">
+                      {todos.map(todo => (
+                        <li key={todo.id} className="flex items-center gap-2 text-sm text-slate-700">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          <span>{todo.content}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        ) : (
+          /* 旧形式: do_textを表示 */
+          record.doText && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-slate-800 mb-4">学習内容サマリー</h2>
+              <p className="text-slate-700 whitespace-pre-wrap">{record.doText}</p>
+            </div>
+          )
         )}
 
         {/* 自由記述（Journal） */}

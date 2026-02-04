@@ -23,6 +23,9 @@
       "Bash(claude mcp add:*)",
       "Bash(dir:*)",
       "Bash(if not exist types mkdir types)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\yufuj\\Desktop\\dev\\study-manage-by-gpt\\app\\api\\goals\\[goalId]"
     ]
   }
 }

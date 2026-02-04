@@ -16,7 +16,7 @@ export interface Goal {
   id: string;
   userId: string;
   level: GoalLevel;
-  description: string;
+  description: string | null; // TODOリスト形式に移行後はnullの可能性あり
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +71,37 @@ export interface GoalHistorySlot {
   changeReason: GoalChangeReason;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Goal Todo
+export interface GoalTodo {
+  id: string;
+  goalId: string;
+  content: string;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Other Todo
+export interface OtherTodo {
+  id: string;
+  userId: string;
+  content: string;
+  isArchived: boolean;
+  lastAchievedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Daily Todo Record
+export interface DailyTodoRecord {
+  id: string;
+  dailyRecordId: string;
+  todoType: 'goal' | 'other';
+  todoId: string;
+  isAchieved: boolean;
+  createdAt: Date;
 }
 
 // Goal History - New UI Design (独立したカード表示用)
