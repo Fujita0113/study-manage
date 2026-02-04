@@ -6,6 +6,7 @@ import {
   getSuggestion,
   calculateStreakFromRecords,
   getDailyTodoRecords,
+  checkYesterdayRecord,
 } from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -17,6 +18,7 @@ import Link from 'next/link';
 import { requireAuth } from '@/lib/auth/server';
 import type { DailyRecord, GoalLevel } from '@/types';
 import { SuggestionBanner } from '@/components/SuggestionBanner';
+import { YesterdayRecordBanner } from '@/components/YesterdayRecordBanner';
 import { Check } from 'lucide-react';
 
 // 日付を「2025年12月31日（火）」形式にフォーマット
@@ -157,6 +159,9 @@ export default async function HomePage() {
   // 5. ストリークを計算
   const streakDays = await calculateStreakFromRecords(user.id);
 
+  // 6. 昨日の日報が作成されているかチェック
+  const yesterdayStatus = await checkYesterdayRecord(user.id);
+
   // レベルの色設定
   const levelColorMap: Record<GoalLevel, string> = {
     bronze: 'text-amber-700',
@@ -240,8 +245,13 @@ export default async function HomePage() {
         ))}
       </div>
 
-      {/* 提案バナー（右下固定） */}
-      <SuggestionBanner suggestion={suggestion} />
+      {/* バナーエリア（右下固定） */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+        {!yesterdayStatus.hasRecord && (
+          <YesterdayRecordBanner yesterdayDate={yesterdayStatus.date} />
+        )}
+        <SuggestionBanner suggestion={suggestion} />
+      </div>
     </AppLayout>
   );
 }

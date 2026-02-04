@@ -83,7 +83,7 @@ export function getLevelBadgeClass(level: AchievementLevel | GoalLevel): string 
 export function getLevelLabel(level: AchievementLevel | GoalLevel): string {
   switch (level) {
     case 'none':
-      return '未記録';
+      return 'None';
     case 'bronze':
       return 'Bronze';
     case 'silver':

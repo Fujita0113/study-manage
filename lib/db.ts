@@ -576,13 +576,8 @@ export async function calculateStreakFromRecords(
       break;
     }
 
-    // Bronze以上なら連続
-    if (['bronze', 'silver', 'gold'].includes(record.achievementLevel)) {
-      streak++;
-    } else {
-      // noneが出たら連続終了
-      break;
-    }
+    // 日報があればストリークとしてカウント（達成レベルは問わない）
+    streak++;
   }
 
   return streak;
@@ -1199,4 +1194,37 @@ export async function saveDailyTodoRecords(
     console.error('Failed to save daily todo records:', insertError);
     throw new Error(`Failed to save daily todo records: ${insertError.message}`);
   }
+}
+
+// ==================== 昨日の日報チェック ====================
+
+/**
+ * 昨日の日報が作成されているかチェック
+ */
+export async function checkYesterdayRecord(userId: string): Promise<{
+  hasRecord: boolean;
+  date: string;
+}> {
+  const supabase = await createClient();
+
+  // 昨日の日付を計算
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = formatDate(yesterday);
+
+  const { data, error } = await supabase
+    .from('daily_records')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('date', yesterdayStr)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking yesterday record:', error);
+  }
+
+  return {
+    hasRecord: !!data,
+    date: yesterdayStr,
+  };
 }

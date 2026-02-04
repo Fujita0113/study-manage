@@ -4,10 +4,19 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { TodoLevelSection, OtherTodoSection } from '@/components/todo';
 import type { GoalLevel, GoalTodo, OtherTodo, AchievementLevel } from '@/types';
 import { formatDate } from '@/lib/utils';
+
+// 日付を「2026年2月3日」形式にフォーマット
+function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${year}年${month}月${day}日`;
+}
 
 interface RecordPageClientProps {
   streakDays: number;
@@ -15,7 +24,16 @@ interface RecordPageClientProps {
 
 export function RecordPageClient({ streakDays }: RecordPageClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get('date');
   const today = formatDate(new Date());
+
+  // URLパラメータがあればそれを使用、なければ今日の日付
+  const targetDate = dateParam || today;
+  const isYesterdayRecord = dateParam && dateParam !== today;
+  const pageTitle = isYesterdayRecord
+    ? `${formatDisplayDate(dateParam)}の日報`
+    : '記録・日報';
 
   // 目標TODOの状態
   const [goalTodos, setGoalTodos] = useState<Record<GoalLevel, GoalTodo[]>>({
@@ -58,8 +76,8 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        // 今日の記録が既にあるかチェック
-        const response = await fetch(`/api/daily-records?date=${today}`);
+        // 対象日の記録が既にあるかチェック
+        const response = await fetch(`/api/daily-records?date=${targetDate}`);
         if (!response.ok) {
           throw new Error('Failed to fetch daily record');
         }
@@ -67,7 +85,7 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
         const existingRecord = await response.json();
         if (existingRecord) {
           // 既に記録がある場合は日詳細ページへリダイレクト
-          router.push(`/day/${today}`);
+          router.push(`/day/${targetDate}`);
           return;
         }
 
@@ -93,7 +111,7 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
     }
 
     loadData();
-  }, [today, router]);
+  }, [targetDate, router]);
 
   // 目標TODOのチェック変更
   const handleGoalTodoChange = (todoId: string, checked: boolean) => {
@@ -163,10 +181,14 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
     return achievedContents.join('\n') || 'なし';
   };
 
+  // 記録可能条件: Bronze達成 OR 自由記述が入力されている
+  const canRecord = achievementLevel !== 'none' || journal.trim().length > 0;
+
   // 保存処理
   const handleSubmit = async () => {
-    if (achievementLevel === 'none') {
-      alert('少なくともBronze目標を全て達成してから記録してください');
+    // Bronze未達成の場合、自由記述が必須
+    if (achievementLevel === 'none' && journal.trim().length === 0) {
+      alert('Bronze目標が未達成の場合、自由記述を入力してください');
       return;
     }
 
@@ -177,7 +199,7 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: today,
+          date: targetDate,
           achievementLevel,
           doText: generateDoText(),
           journalText: journal || undefined,
@@ -234,7 +256,7 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
 
   if (loading) {
     return (
-      <AppLayout pageTitle="記録・日報" streakDays={streakDays}>
+      <AppLayout pageTitle={pageTitle} streakDays={streakDays}>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-slate-600">読み込み中...</p>
         </div>
@@ -256,13 +278,15 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
   const badge = getLevelBadge();
 
   return (
-    <AppLayout pageTitle="記録・日報" streakDays={streakDays}>
+    <AppLayout pageTitle={pageTitle} streakDays={streakDays}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* 達成状況サマリー */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-800">今日の達成状況</h2>
+              <h2 className="text-lg font-semibold text-slate-800">
+                {isYesterdayRecord ? `${formatDisplayDate(dateParam!)}の達成状況` : '今日の達成状況'}
+              </h2>
               <p className="text-sm text-slate-600">
                 各レベルのTODOを全て達成すると、そのレベルが達成となります
               </p>
@@ -336,9 +360,9 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
         <div className="flex justify-end">
           <button
             onClick={handleSubmit}
-            disabled={achievementLevel === 'none' || saving}
+            disabled={!canRecord || saving}
             className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-              achievementLevel === 'none' || saving
+              !canRecord || saving
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700'
             }`}
@@ -346,12 +370,6 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
             {saving ? '保存中...' : '記録を確定してロックする'}
           </button>
         </div>
-
-        {achievementLevel === 'none' && (
-          <p className="text-sm text-center text-amber-600">
-            ※ Bronze目標を全て達成すると記録できるようになります
-          </p>
-        )}
       </div>
     </AppLayout>
   );

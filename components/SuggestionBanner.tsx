@@ -29,7 +29,7 @@ export function SuggestionBanner({ suggestion }: SuggestionBannerProps) {
   const goalsUrl = `/goals?edit=${editParam}`;
 
   return (
-    <div className={`fixed bottom-6 right-6 ${bgColor} text-white rounded-lg shadow-2xl p-4 max-w-sm z-50 animate-slide-up`}>
+    <div className={`${bgColor} text-white rounded-lg shadow-2xl p-4 max-w-sm animate-slide-up relative`}>
       {/* 閉じるボタン */}
       <button
         onClick={() => setIsVisible(false)}
