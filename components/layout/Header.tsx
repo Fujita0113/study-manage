@@ -3,13 +3,25 @@
 // ヘッダーコンポーネント
 
 import Link from 'next/link';
+import { RecoveryModeStatus } from '@/types';
 
 interface HeaderProps {
   pageTitle: string;
   streakDays: number;
+  recoveryStatus?: RecoveryModeStatus;
+  canShowRecoveryButton?: boolean;
+  onRecoveryClick?: () => void;
 }
 
-export function Header({ pageTitle, streakDays }: HeaderProps) {
+export function Header({
+  pageTitle,
+  streakDays,
+  recoveryStatus,
+  canShowRecoveryButton,
+  onRecoveryClick
+}: HeaderProps) {
+  const showRecoveryButton = canShowRecoveryButton && recoveryStatus?.goal && !recoveryStatus?.isActive;
+
   return (
     <div className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-10">
       {/* 左側: ページタイトル */}
@@ -22,6 +34,16 @@ export function Header({ pageTitle, streakDays }: HeaderProps) {
           <span className="text-lg">🔥</span>
           <span className="text-sm font-medium text-orange-700">{streakDays} days</span>
         </div>
+
+        {/* リカバリーボタン（記録未確定時のみ表示） */}
+        {showRecoveryButton && (
+          <button
+            onClick={onRecoveryClick}
+            className="px-4 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600 transition-colors"
+          >
+            リカバリー
+          </button>
+        )}
 
         {/* 今日の記録をつけるボタン */}
         <Link

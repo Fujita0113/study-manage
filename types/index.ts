@@ -7,8 +7,18 @@ export type AchievementLevel = 'none' | 'bronze' | 'silver' | 'gold';
 // User Settings
 export interface UserSettings {
   id: string;
+  recoveryGoal?: string;
+  recoveryModeActive?: boolean;
+  recoveryModeActivatedDate?: string; // YYYY-MM-DD
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Recovery Mode Status
+export interface RecoveryModeStatus {
+  isActive: boolean;
+  goal: string | null;
+  activatedDate: string | null;
 }
 
 // Goal
@@ -27,6 +37,7 @@ export interface DailyRecord {
   userId: string;
   date: string; // YYYY-MM-DD
   achievementLevel: AchievementLevel;
+  recoveryAchieved?: boolean;
   doText?: string;
   journalText?: string;
   createdAt: Date;

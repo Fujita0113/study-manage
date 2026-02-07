@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/auth/server';
-import { createInitialGoals, createGoalTodos, getGoals } from '@/lib/db';
+import { createInitialGoals, createGoalTodos, getGoals, updateRecoveryGoal } from '@/lib/db';
 
 /**
  * 初期目標を一括保存するAPI
@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     // 2. リクエストボディを取得
     console.log('[API] Parsing request body...');
     const body = await request.json();
-    const { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos } = body;
-    console.log('[API] Request body:', { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos });
+    const { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos, recoveryGoal } = body;
+    console.log('[API] Request body:', { bronze, silver, gold, bronzeTodos, silverTodos, goldTodos, recoveryGoal });
 
     // 3. バリデーション
     if (!bronze || !silver || !gold) {
@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
       console.log('[API] Validation failed: invalid gold goal');
       return NextResponse.json(
         { error: 'Gold goal must be a non-empty string' },
+        { status: 400 }
+      );
+    }
+
+    if (!recoveryGoal || typeof recoveryGoal !== 'string' || recoveryGoal.trim().length === 0) {
+      console.log('[API] Validation failed: invalid recovery goal');
+      return NextResponse.json(
+        { error: 'Recovery goal must be a non-empty string' },
         { status: 400 }
       );
     }
@@ -152,6 +160,13 @@ export async function POST(request: NextRequest) {
           console.log(`[API] Created ${todos.length} todos for ${goal.level} goal`);
         }
       }
+    }
+
+    // 5.6. リカバリー目標を保存
+    if (recoveryGoal) {
+      console.log('[API] Saving recovery goal...');
+      await updateRecoveryGoal(user.id, recoveryGoal.trim());
+      console.log('[API] Recovery goal saved successfully');
     }
 
     // 6. 成功レスポンス

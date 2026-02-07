@@ -85,6 +85,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               const dateStr = formatDate(date);
               const record = records.find(r => r.date === dateStr);
               const achievementLevel = record?.achievementLevel || 'none';
+              const recoveryAchieved = record?.recoveryAchieved || false;
               const cellColor = record ? getLevelColor(achievementLevel) : '#F3F4F6';
               const isToday = dateStr === formatDate(new Date());
 
@@ -97,16 +98,24 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 >
                   <div className="flex items-start justify-between">
                     <span className="text-sm font-medium text-slate-700">{date.getDate()}</span>
-                    {isToday && (
-                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {recoveryAchieved && (
+                        <span className="text-sm" title="リカバリー達成">♥️</span>
+                      )}
+                      {isToday && (
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                      )}
+                    </div>
                   </div>
 
                   {/* ホバーツールチップ */}
                   {record && (
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10 shadow-lg">
                       <div className="font-semibold">{formatDateShort(dateStr)}</div>
-                      <div className="mt-1">達成度: {getLevelLabel(achievementLevel)}</div>
+                      <div className="mt-1">
+                        達成度: {getLevelLabel(achievementLevel)}
+                        {recoveryAchieved && ' + ♥️リカバリー'}
+                      </div>
                       {record.journalText && (
                         <div className="mt-1 max-w-xs truncate">
                           {record.journalText.substring(0, 40)}
@@ -147,6 +156,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   style={{ backgroundColor: getLevelColor('bronze') }}
                 />
                 <span className="text-sm text-slate-600">Bronze</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">♥️</span>
+                <span className="text-sm text-slate-600">リカバリー達成</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-gray-100" />

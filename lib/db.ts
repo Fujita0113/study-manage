@@ -20,6 +20,7 @@ import {
   GoalTodo,
   OtherTodo,
   DailyTodoRecord,
+  RecoveryModeStatus,
 } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
@@ -59,12 +60,13 @@ type DailyTodoRecordInsert = Database['public']['Tables']['daily_todo_records'][
 /**
  * Supabaseのsnake_case形式をTypeScriptのcamelCase形式に変換
  */
-function toDailyRecord(dbRecord: DailyRecordRow): DailyRecord {
+function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean }): DailyRecord {
   return {
     id: dbRecord.id,
     userId: dbRecord.user_id,
     date: dbRecord.date,
     achievementLevel: dbRecord.achievement_level as AchievementLevel,
+    recoveryAchieved: dbRecord.recovery_achieved || false,
     doText: dbRecord.do_text || undefined,
     journalText: dbRecord.journal_text || undefined,
     createdAt: new Date(dbRecord.created_at),
@@ -161,10 +163,20 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
   if (error) throw error;
   if (!data) throw new Error('User settings not found');
 
+  // リカバリーモード関連のフィールドをキャスト
+  const settingsData = data as typeof data & {
+    recovery_goal?: string | null;
+    recovery_mode_active?: boolean;
+    recovery_mode_activated_date?: string | null;
+  };
+
   return {
-    id: data.id,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    id: settingsData.id,
+    recoveryGoal: settingsData.recovery_goal || undefined,
+    recoveryModeActive: settingsData.recovery_mode_active || false,
+    recoveryModeActivatedDate: settingsData.recovery_mode_activated_date || undefined,
+    createdAt: new Date(settingsData.created_at),
+    updatedAt: new Date(settingsData.updated_at),
   };
 }
 
@@ -466,12 +478,13 @@ export async function createDailyRecord(
   const supabase = await createClient();
 
   // TypeScriptのcamelCaseをSupabaseのsnake_caseに変換
-  const insertData: DailyRecordInsert = {
+  const insertData: DailyRecordInsert & { recovery_achieved?: boolean } = {
     user_id: userId,
     date: recordData.date,
     achievement_level: recordData.achievementLevel,
     do_text: recordData.doText || null,
     journal_text: recordData.journalText || null,
+    recovery_achieved: recordData.recoveryAchieved || false,
   };
 
   const query = supabase.from('daily_records');
@@ -1227,4 +1240,167 @@ export async function checkYesterdayRecord(userId: string): Promise<{
     hasRecord: !!data,
     date: yesterdayStr,
   };
+}
+
+// ==================== Recovery Mode ====================
+
+/**
+ * リカバリー目標を取得
+ */
+export async function getRecoveryGoal(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Failed to fetch recovery goal:', error);
+    return null;
+  }
+
+  const settingsData = data as typeof data & { recovery_goal?: string | null };
+  return settingsData?.recovery_goal || null;
+}
+
+/**
+ * リカバリー目標を更新
+ * user_settings に行が存在しない場合は INSERT（upsert）する
+ */
+export async function updateRecoveryGoal(userId: string, goal: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await (supabase
+    .from('user_settings') as any)
+    .upsert(
+      {
+        id: userId,
+        recovery_goal: goal,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+
+  if (error) {
+    console.error('Failed to update recovery goal:', error);
+    throw new Error(`Failed to update recovery goal: ${error.message}`);
+  }
+}
+
+/**
+ * リカバリーモードの状態を取得
+ */
+export async function getRecoveryModeStatus(userId: string): Promise<RecoveryModeStatus> {
+  const supabase = await createClient();
+  const today = formatDate(new Date());
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Failed to fetch recovery mode status:', error);
+    return {
+      isActive: false,
+      goal: null,
+      activatedDate: null,
+    };
+  }
+
+  const settingsData = data as typeof data & {
+    recovery_goal?: string | null;
+    recovery_mode_active?: boolean;
+    recovery_mode_activated_date?: string | null;
+  };
+
+  // 日付が変わっていたら自動解除
+  const isActive = settingsData?.recovery_mode_active && settingsData?.recovery_mode_activated_date === today;
+
+  return {
+    isActive: isActive || false,
+    goal: settingsData?.recovery_goal || null,
+    activatedDate: settingsData?.recovery_mode_activated_date || null,
+  };
+}
+
+/**
+ * リカバリーモードを起動
+ * user_settings に行が存在しない場合は INSERT（upsert）する
+ */
+export async function activateRecoveryMode(userId: string): Promise<void> {
+  const supabase = await createClient();
+  const today = formatDate(new Date());
+
+  const { error } = await (supabase
+    .from('user_settings') as any)
+    .upsert(
+      {
+        id: userId,
+        recovery_mode_active: true,
+        recovery_mode_activated_date: today,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+
+  if (error) {
+    console.error('Failed to activate recovery mode:', error);
+    throw new Error(`Failed to activate recovery mode: ${error.message}`);
+  }
+}
+
+/**
+ * リカバリーモードを解除
+ */
+export async function deactivateRecoveryMode(userId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await (supabase
+    .from('user_settings') as any)
+    .update({
+      recovery_mode_active: false,
+      recovery_mode_activated_date: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Failed to deactivate recovery mode:', error);
+    throw new Error(`Failed to deactivate recovery mode: ${error.message}`);
+  }
+}
+
+/**
+ * リカバリー目標が設定されているかチェック
+ */
+export async function hasRecoveryGoal(userId: string): Promise<boolean> {
+  const goal = await getRecoveryGoal(userId);
+  return !!goal && goal.trim().length > 0;
+}
+
+/**
+ * 日報にリカバリー達成フラグを保存
+ */
+export async function updateDailyRecordRecovery(
+  recordId: string,
+  recoveryAchieved: boolean
+): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await (supabase
+    .from('daily_records') as any)
+    .update({
+      recovery_achieved: recoveryAchieved,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', recordId);
+
+  if (error) {
+    console.error('Failed to update daily record recovery:', error);
+    throw new Error(`Failed to update daily record recovery: ${error.message}`);
+  }
 }

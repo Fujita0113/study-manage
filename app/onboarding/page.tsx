@@ -19,6 +19,7 @@ function OnboardingForm() {
   const [bronzeTodos, setBronzeTodos] = useState<TodoItem[]>([]);
   const [silverTodos, setSilverTodos] = useState<TodoItem[]>([]);
   const [goldTodos, setGoldTodos] = useState<TodoItem[]>([]);
+  const [recoveryGoal, setRecoveryGoal] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -40,19 +41,19 @@ function OnboardingForm() {
     }
   }, [searchParams]);
 
-  // 全ての目標が1つ以上入力されているかチェック
-  const isFormValid = bronzeTodos.length > 0 && silverTodos.length > 0 && goldTodos.length > 0;
+  // 全ての目標が1つ以上入力されているかチェック（リカバリー目標も必須）
+  const isFormValid = bronzeTodos.length > 0 && silverTodos.length > 0 && goldTodos.length > 0 && recoveryGoal.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('[Onboarding] handleSubmit called');
     e.preventDefault();
 
-    console.log('[Onboarding] Form values:', { bronzeTodos, silverTodos, goldTodos });
+    console.log('[Onboarding] Form values:', { bronzeTodos, silverTodos, goldTodos, recoveryGoal });
     console.log('[Onboarding] isFormValid:', isFormValid);
 
     if (!isFormValid) {
       console.log('[Onboarding] Form validation failed');
-      setError('各レベルに少なくとも1つのTODOを設定してください');
+      setError('各レベルに少なくとも1つのTODOを設定し、リカバリー目標も入力してください');
       return;
     }
 
@@ -75,6 +76,8 @@ function OnboardingForm() {
           bronzeTodos: bronzeTodos.map(t => t.content),
           silverTodos: silverTodos.map(t => t.content),
           goldTodos: goldTodos.map(t => t.content),
+          // リカバリー目標
+          recoveryGoal: recoveryGoal.trim(),
         }),
       });
 
@@ -239,6 +242,27 @@ function OnboardingForm() {
             maxItems={5}
             placeholder={levelConfig.gold.placeholder}
             disabled={isLoading}
+          />
+        </div>
+
+        {/* リカバリー目標 */}
+        <div className="rounded-lg bg-pink-50 p-4">
+          <div className="mb-3">
+            <span className="inline-block px-3 py-1 bg-pink-500 text-white rounded-md mr-2 text-sm font-medium">
+              Recovery
+            </span>
+            <span className="text-sm text-slate-600">調子が悪い日の回復アクション</span>
+          </div>
+          <p className="text-sm text-slate-500 mb-3">
+            Bronzeの達成も難しい日に実行する、シンプルな回復アクションを1つ設定してください。
+          </p>
+          <input
+            type="text"
+            value={recoveryGoal}
+            onChange={(e) => setRecoveryGoal(e.target.value)}
+            placeholder="例：サウナに行く"
+            disabled={isLoading}
+            className="w-full px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
 

@@ -6,7 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TodoLevelSection, OtherTodoSection } from '@/components/todo';
-import type { GoalLevel, GoalTodo, OtherTodo, AchievementLevel } from '@/types';
+import type { GoalLevel, GoalTodo, OtherTodo, AchievementLevel, RecoveryModeStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 // 日付を「2026年2月3日」形式にフォーマット
@@ -20,9 +20,10 @@ function formatDisplayDate(dateStr: string): string {
 
 interface RecordPageClientProps {
   streakDays: number;
+  recoveryStatus: RecoveryModeStatus;
 }
 
-export function RecordPageClient({ streakDays }: RecordPageClientProps) {
+export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get('date');
@@ -46,6 +47,8 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
   // 達成済みTODO ID
   const [achievedGoalTodoIds, setAchievedGoalTodoIds] = useState<Set<string>>(new Set());
   const [achievedOtherTodoIds, setAchievedOtherTodoIds] = useState<Set<string>>(new Set());
+  // リカバリー達成
+  const [recoveryAchieved, setRecoveryAchieved] = useState(false);
   // 日報
   const [journal, setJournal] = useState('');
   const [loading, setLoading] = useState(true);
@@ -181,19 +184,25 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
     return achievedContents.join('\n') || 'なし';
   };
 
-  // 記録可能条件: Bronze達成 OR 自由記述が入力されている
-  const canRecord = achievementLevel !== 'none' || journal.trim().length > 0;
+  // 記録可能条件: Bronze達成 OR リカバリー達成 OR 自由記述が入力されている
+  const canRecord = achievementLevel !== 'none' || recoveryAchieved || journal.trim().length > 0;
 
   // 保存処理
   const handleSubmit = async () => {
-    // Bronze未達成の場合、自由記述が必須
-    if (achievementLevel === 'none' && journal.trim().length === 0) {
-      alert('Bronze目標が未達成の場合、自由記述を入力してください');
+    // Bronze未達成かつリカバリー未達成の場合、自由記述が必須
+    if (achievementLevel === 'none' && !recoveryAchieved && journal.trim().length === 0) {
+      alert('Bronze目標が未達成の場合、リカバリーを達成するか自由記述を入力してください');
       return;
     }
 
     setSaving(true);
     try {
+      // doTextを生成（リカバリー達成を含む）
+      let doText = generateDoText();
+      if (recoveryAchieved && recoveryStatus.goal) {
+        doText = `[RECOVERY] ${recoveryStatus.goal}\n${doText}`;
+      }
+
       // 日次記録を作成
       const response = await fetch('/api/daily-records', {
         method: 'POST',
@@ -201,8 +210,9 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
         body: JSON.stringify({
           date: targetDate,
           achievementLevel,
-          doText: generateDoText(),
+          doText,
           journalText: journal || undefined,
+          recoveryAchieved,
         }),
       });
 
@@ -244,6 +254,11 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
         body: JSON.stringify({ records: todoRecords }),
       });
 
+      // リカバリーモードを解除（アクティブな場合）
+      if (recoveryStatus.isActive) {
+        await fetch('/api/recovery-mode', { method: 'DELETE' });
+      }
+
       // ホーム画面へ遷移
       router.push('/');
     } catch (error) {
@@ -266,13 +281,22 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
 
   // 達成状況表示
   const getLevelBadge = () => {
+    // リカバリー達成のみの場合
+    if (achievementLevel === 'none' && recoveryAchieved) {
+      return { text: '♥️ Recovery達成', color: 'bg-pink-500 text-white' };
+    }
     const badges = {
       none: { text: '未達成', color: 'bg-gray-200 text-gray-600' },
       bronze: { text: 'Bronze達成', color: 'bg-bronze text-white' },
       silver: { text: 'Silver達成', color: 'bg-silver text-white' },
       gold: { text: 'Gold達成', color: 'bg-gold text-white' },
     };
-    return badges[achievementLevel];
+    const badge = badges[achievementLevel];
+    // 通常レベル達成 + リカバリー達成の場合
+    if (recoveryAchieved && achievementLevel !== 'none') {
+      return { text: `${badge.text} + ♥️`, color: badge.color };
+    }
+    return badge;
   };
 
   const badge = getLevelBadge();
@@ -296,6 +320,31 @@ export function RecordPageClient({ streakDays }: RecordPageClientProps) {
             </span>
           </div>
         </div>
+
+        {/* リカバリーセクション（リカバリーモード中のみ表示） */}
+        {recoveryStatus.isActive && recoveryStatus.goal && (
+          <section className="bg-pink-50 rounded-lg shadow-sm border-2 border-pink-300 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">♥️</span>
+              <h2 className="text-xl font-semibold text-pink-800">Recovery</h2>
+            </div>
+            <p className="text-sm text-pink-700 mb-4">
+              リカバリーモード中です。以下の目標を達成してチェックを入れてください。
+            </p>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={recoveryAchieved}
+                onChange={(e) => setRecoveryAchieved(e.target.checked)}
+                disabled={saving}
+                className="mt-0.5 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500"
+              />
+              <span className={`text-lg ${recoveryAchieved ? 'line-through text-pink-400' : 'text-pink-800'}`}>
+                {recoveryStatus.goal}
+              </span>
+            </label>
+          </section>
+        )}
 
         {/* 目標TODOチェックリスト */}
         <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

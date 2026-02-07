@@ -7,6 +7,8 @@ import {
   calculateStreakFromRecords,
   getDailyTodoRecords,
   checkYesterdayRecord,
+  getRecoveryModeStatus,
+  getDailyRecordByDate,
 } from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -49,6 +51,7 @@ interface DailyReportCardData {
   date: string;
   displayDate: string;
   achievementLevel: DailyRecord['achievementLevel'];
+  recoveryAchieved: boolean;
   achievedTodos: AchievedTodoItem[];
   learningItems: string[]; // 旧形式用（do_textから抽出）
   journalExcerpt?: string;
@@ -144,6 +147,7 @@ export default async function HomePage() {
       date: record.date,
       displayDate: formatDateDisplay(record.date),
       achievementLevel: record.achievementLevel,
+      recoveryAchieved: record.recoveryAchieved || false,
       achievedTodos,
       learningItems,
       journalExcerpt: createJournalExcerpt(record.journalText),
@@ -162,6 +166,13 @@ export default async function HomePage() {
   // 6. 昨日の日報が作成されているかチェック
   const yesterdayStatus = await checkYesterdayRecord(user.id);
 
+  // 7. リカバリーモードのステータスを取得
+  const recoveryStatus = await getRecoveryModeStatus(user.id);
+
+  // 8. 今日の記録があるかチェック（リカバリーボタン表示判定用）
+  const todayRecord = await getDailyRecordByDate(today, user.id);
+  const canShowRecoveryButton = !todayRecord && recoveryStatus.goal !== null;
+
   // レベルの色設定
   const levelColorMap: Record<GoalLevel, string> = {
     bronze: 'text-amber-700',
@@ -170,7 +181,12 @@ export default async function HomePage() {
   };
 
   return (
-    <AppLayout pageTitle="ホーム" streakDays={streakDays}>
+    <AppLayout
+      pageTitle="ホーム"
+      streakDays={streakDays}
+      recoveryStatus={recoveryStatus}
+      canShowRecoveryButton={canShowRecoveryButton}
+    >
       {/* デイリーレポートカードグリッド */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {dailyReportCards.map((card) => (
@@ -184,12 +200,17 @@ export default async function HomePage() {
               <h3 className="text-lg font-semibold text-slate-800">
                 {card.displayDate}
               </h3>
-              <span
-                className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                style={{ backgroundColor: getLevelColor(card.achievementLevel) }}
-              >
-                {getLevelLabel(card.achievementLevel)}
-              </span>
+              <div className="flex items-center gap-2">
+                {card.recoveryAchieved && (
+                  <span className="text-lg" title="リカバリー達成">♥️</span>
+                )}
+                <span
+                  className="px-3 py-1 rounded-full text-sm font-medium text-white"
+                  style={{ backgroundColor: getLevelColor(card.achievementLevel) }}
+                >
+                  {getLevelLabel(card.achievementLevel)}
+                </span>
+              </div>
             </div>
 
             {/* 達成TODO / 学習内容 */}

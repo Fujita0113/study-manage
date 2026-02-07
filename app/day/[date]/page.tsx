@@ -161,13 +161,20 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
         {/* 達成度 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-4">達成度</h2>
-          <span
-            className={`inline-block px-4 py-2 rounded-lg text-sm font-semibold ${getLevelBadgeClass(
-              record.achievementLevel
-            )}`}
-          >
-            {getLevelLabel(record.achievementLevel)}
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`inline-block px-4 py-2 rounded-lg text-sm font-semibold ${getLevelBadgeClass(
+                record.achievementLevel
+              )}`}
+            >
+              {getLevelLabel(record.achievementLevel)}
+            </span>
+            {record.recoveryAchieved && (
+              <span className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-pink-100 text-pink-700">
+                ♥️ リカバリー達成
+              </span>
+            )}
+          </div>
         </div>
 
         {/* 達成TODOリスト */}
