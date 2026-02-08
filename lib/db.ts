@@ -522,6 +522,9 @@ export async function updateDailyRecord(
   if (updates.journalText !== undefined) {
     updateData.journal_text = updates.journalText || null;
   }
+  if (updates.recoveryAchieved !== undefined) {
+    updateData.recovery_achieved = updates.recoveryAchieved;
+  }
 
   const { data, error } = await supabase
     .from('daily_records')
@@ -533,15 +536,18 @@ export async function updateDailyRecord(
   if (error) throw error;
   if (!data) throw new Error(`Daily record not found: ${recordId}`);
 
+  const dbData = data as typeof data & { recovery_achieved?: boolean };
+
   return {
-    id: data.id,
-    userId: data.user_id,
-    date: data.date,
-    achievementLevel: data.achievement_level as AchievementLevel,
-    doText: data.do_text || undefined,
-    journalText: data.journal_text || undefined,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    id: dbData.id,
+    userId: dbData.user_id,
+    date: dbData.date,
+    achievementLevel: dbData.achievement_level as AchievementLevel,
+    recoveryAchieved: dbData.recovery_achieved || false,
+    doText: dbData.do_text || undefined,
+    journalText: dbData.journal_text || undefined,
+    createdAt: new Date(dbData.created_at),
+    updatedAt: new Date(dbData.updated_at),
   };
 }
 
@@ -1164,6 +1170,56 @@ export async function getDailyTodoRecords(
   }
 
   return (data || []).map(toDailyTodoRecord);
+}
+
+/**
+ * 特定の日付の達成TODO一覧を取得（日報編集用）
+ * @param userId - ユーザーID
+ * @param date - 記録日（YYYY-MM-DD形式）
+ * @returns 達成TODO一覧（goal_todosとother_todosの情報を含む）
+ */
+export async function getCompletedTodosByDate(
+  userId: string,
+  date: string
+): Promise<Array<{
+  id: string;
+  todoType: 'goal' | 'other';
+  todoId: string;
+  isAchieved: boolean;
+  goalTodo?: GoalTodo;
+  otherTodo?: OtherTodo;
+}>> {
+  const supabase = await createClient();
+
+  // まず日報を取得
+  const dailyRecord = await getDailyRecordByDate(date, userId);
+  if (!dailyRecord) {
+    return [];
+  }
+
+  // TODO達成記録を取得
+  const { data, error } = await supabase
+    .from('daily_todo_records')
+    .select(`
+      *,
+      goal_todos(*),
+      other_todos(*)
+    `)
+    .eq('daily_record_id', dailyRecord.id);
+
+  if (error) {
+    console.error('Failed to fetch completed todos by date:', error);
+    return [];
+  }
+
+  return (data || []).map((record: any) => ({
+    id: record.id,
+    todoType: record.todo_type as 'goal' | 'other',
+    todoId: record.todo_id,
+    isAchieved: record.is_achieved,
+    goalTodo: record.goal_todos ? toGoalTodo(record.goal_todos) : undefined,
+    otherTodo: record.other_todos ? toOtherTodo(record.other_todos) : undefined,
+  }));
 }
 
 /**

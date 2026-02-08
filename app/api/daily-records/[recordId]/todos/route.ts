@@ -9,7 +9,7 @@ import { getDailyTodoRecords, saveDailyTodoRecords } from '@/lib/db';
 
 /**
  * GET /api/daily-records/[recordId]/todos
- * 日次TODO達成記録を取得
+ * 日次TODO達成記録を取得（goal_todos, other_todosの情報を含む）
  */
 export async function GET(
   request: NextRequest,
@@ -24,7 +24,34 @@ export async function GET(
     }
 
     const { recordId } = await params;
-    const records = await getDailyTodoRecords(recordId);
+
+    // TODO達成記録を取得（goal_todosとother_todosの情報を含む）
+    const { data, error } = await supabase
+      .from('daily_todo_records')
+      .select(`
+        *,
+        goal_todos(*),
+        other_todos(*)
+      `)
+      .eq('daily_record_id', recordId);
+
+    if (error) {
+      console.error('Failed to fetch daily todo records:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+
+    // 型を整形して返す
+    const records = (data || []).map((record: any) => ({
+      id: record.id,
+      todoType: record.todo_type as 'goal' | 'other',
+      todoId: record.todo_id,
+      isAchieved: record.is_achieved,
+      goalTodo: record.goal_todos,
+      otherTodo: record.other_todos,
+    }));
 
     return NextResponse.json(records);
   } catch (error) {

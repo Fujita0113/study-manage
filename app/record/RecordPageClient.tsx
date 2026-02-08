@@ -53,6 +53,10 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   const [journal, setJournal] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // 編集モード
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
+  const [isEditable, setIsEditable] = useState(true);
 
   // 達成レベルを自動判定
   const calculateAchievementLevel = useCallback((): AchievementLevel => {
@@ -80,16 +84,56 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     async function loadData() {
       try {
         // 対象日の記録が既にあるかチェック
-        const response = await fetch(`/api/daily-records?date=${targetDate}`);
-        if (!response.ok) {
+        const existingRecordResponse = await fetch(`/api/daily-records?date=${targetDate}`);
+        if (!existingRecordResponse.ok) {
           throw new Error('Failed to fetch daily record');
         }
 
-        const existingRecord = await response.json();
-        if (existingRecord) {
-          // 既に記録がある場合は日詳細ページへリダイレクト
-          router.push(`/day/${targetDate}`);
-          return;
+        const existingRecord = await existingRecordResponse.json();
+
+        // daily_records APIは直接recordを返すので、それをexistingDataに変換
+        const existingData = existingRecord ? {
+          record: existingRecord,
+          todos: [] // todosは別途取得する
+        } : { record: null, todos: [] };
+
+        // 既に記録がある場合は編集モードに切り替え
+        if (existingData.record) {
+          setIsEditMode(true);
+          setExistingRecordId(existingData.record.id);
+
+          // 編集可能期限を判定（記録日の当日中23:59:59まで）
+          const recordDate = new Date(existingData.record.date + 'T00:00:00');
+          const now = new Date();
+          const recordDateEnd = new Date(recordDate);
+          recordDateEnd.setHours(23, 59, 59, 999);
+
+          // 記録日の当日かつ23:59:59より前であれば編集可能
+          const isSameDay = recordDate.toDateString() === now.toDateString();
+          const isBeforeDeadline = now <= recordDateEnd;
+          setIsEditable(isSameDay && isBeforeDeadline);
+
+          // 既存データを読み込む
+          setJournal(existingData.record.journalText || '');
+          setRecoveryAchieved(existingData.record.recoveryAchieved || false);
+
+          // 達成TODO一覧を取得
+          const todosResponse = await fetch(`/api/daily-records/${existingData.record.id}/todos`);
+          if (todosResponse.ok) {
+            const todosData = await todosResponse.json();
+            const goalTodoIds = new Set<string>();
+            const otherTodoIds = new Set<string>();
+
+            todosData.forEach((todo: any) => {
+              if (todo.todoType === 'goal' && todo.isAchieved) {
+                goalTodoIds.add(todo.todoId);
+              } else if (todo.todoType === 'other' && todo.isAchieved) {
+                otherTodoIds.add(todo.todoId);
+              }
+            });
+            setAchievedGoalTodoIds(goalTodoIds);
+            setAchievedOtherTodoIds(otherTodoIds);
+          }
         }
 
         // 目標TODOを取得
@@ -114,7 +158,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     }
 
     loadData();
-  }, [targetDate, router]);
+  }, [targetDate]);
 
   // 目標TODOのチェック変更
   const handleGoalTodoChange = (todoId: string, checked: boolean) => {
@@ -203,24 +247,47 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
         doText = `[RECOVERY] ${recoveryStatus.goal}\n${doText}`;
       }
 
-      // 日次記録を作成
-      const response = await fetch('/api/daily-records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: targetDate,
-          achievementLevel,
-          doText,
-          journalText: journal || undefined,
-          recoveryAchieved,
-        }),
-      });
+      let recordId: string;
 
-      if (!response.ok) {
-        throw new Error('Failed to create daily record');
+      if (isEditMode && existingRecordId) {
+        // 編集モード: 既存レコードを更新
+        const updateResponse = await fetch(`/api/daily-records/${existingRecordId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            achievementLevel,
+            doText,
+            journalText: journal || undefined,
+            recoveryAchieved,
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update daily record');
+        }
+
+        recordId = existingRecordId;
+      } else {
+        // 新規作成モード: 新しいレコードを作成
+        const createResponse = await fetch('/api/daily-records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: targetDate,
+            achievementLevel,
+            doText,
+            journalText: journal || undefined,
+            recoveryAchieved,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          throw new Error('Failed to create daily record');
+        }
+
+        const newRecord = await createResponse.json();
+        recordId = newRecord.id;
       }
-
-      const newRecord = await response.json();
 
       // 達成記録を保存
       const todoRecords: { todoType: 'goal' | 'other'; todoId: string; isAchieved: boolean }[] = [];
@@ -248,14 +315,14 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
       });
 
       // 達成記録をAPIに送信
-      await fetch(`/api/daily-records/${newRecord.id}/todos`, {
+      await fetch(`/api/daily-records/${recordId}/todos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ records: todoRecords }),
       });
 
-      // リカバリーモードを解除（アクティブな場合）
-      if (recoveryStatus.isActive) {
+      // リカバリーモードを解除（アクティブな場合、新規作成時のみ）
+      if (recoveryStatus.isActive && !isEditMode) {
         await fetch('/api/recovery-mode', { method: 'DELETE' });
       }
 
@@ -304,12 +371,31 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   return (
     <AppLayout pageTitle={pageTitle} streakDays={streakDays}>
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* 編集期限切れメッセージ */}
+        {isEditMode && !isEditable && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  この日報は編集期限が過ぎています（記録日の当日中のみ編集可能）
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 達成状況サマリー */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">
                 {isYesterdayRecord ? `${formatDisplayDate(dateParam!)}の達成状況` : '今日の達成状況'}
+                {isEditMode && <span className="ml-2 text-sm text-blue-600">(編集モード)</span>}
               </h2>
               <p className="text-sm text-slate-600">
                 各レベルのTODOを全て達成すると、そのレベルが達成となります
@@ -336,8 +422,8 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
                 type="checkbox"
                 checked={recoveryAchieved}
                 onChange={(e) => setRecoveryAchieved(e.target.checked)}
-                disabled={saving}
-                className="mt-0.5 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500"
+                disabled={saving || !isEditable}
+                className="mt-0.5 w-5 h-5 rounded border-pink-300 text-pink-600 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <span className={`text-lg ${recoveryAchieved ? 'line-through text-pink-400' : 'text-pink-800'}`}>
                 {recoveryStatus.goal}
@@ -358,21 +444,21 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               todos={goalTodos.bronze}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
-              disabled={saving}
+              disabled={saving || !isEditable}
             />
             <TodoLevelSection
               level="silver"
               todos={goalTodos.silver}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
-              disabled={saving}
+              disabled={saving || !isEditable}
             />
             <TodoLevelSection
               level="gold"
               todos={goalTodos.gold}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
-              disabled={saving}
+              disabled={saving || !isEditable}
             />
           </div>
         </section>
@@ -388,7 +474,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             achievedTodoIds={achievedOtherTodoIds}
             onTodoChange={handleOtherTodoChange}
             onAddTodo={handleAddOtherTodo}
-            disabled={saving}
+            disabled={saving || !isEditable}
           />
         </section>
 
@@ -399,26 +485,28 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             placeholder="今日感じたこと、学んだこと、自分への褒め言葉など"
             value={journal}
             onChange={e => setJournal(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             rows={4}
-            disabled={saving}
+            disabled={saving || !isEditable}
           />
         </section>
 
         {/* 保存ボタン */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleSubmit}
-            disabled={!canRecord || saving}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-              !canRecord || saving
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-          >
-            {saving ? '保存中...' : '記録を確定してロックする'}
-          </button>
-        </div>
+        {isEditable && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleSubmit}
+              disabled={!canRecord || saving}
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                !canRecord || saving
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {saving ? '保存中...' : isEditMode ? '変更を保存する' : '記録を確定してロックする'}
+            </button>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
