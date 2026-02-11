@@ -25,14 +25,10 @@ export async function GET(
 
     const { recordId } = await params;
 
-    // TODO達成記録を取得（goal_todosとother_todosの情報を含む）
+    // TODO達成記録を取得
     const { data, error } = await supabase
       .from('daily_todo_records')
-      .select(`
-        *,
-        goal_todos(*),
-        other_todos(*)
-      `)
+      .select('*')
       .eq('daily_record_id', recordId);
 
     if (error) {
@@ -49,8 +45,6 @@ export async function GET(
       todoType: record.todo_type as 'goal' | 'other',
       todoId: record.todo_id,
       isAchieved: record.is_achieved,
-      goalTodo: record.goal_todos,
-      otherTodo: record.other_todos,
     }));
 
     return NextResponse.json(records);

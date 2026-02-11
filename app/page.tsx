@@ -192,7 +192,7 @@ export default async function HomePage() {
         {dailyReportCards.map((card) => (
           <Link
             key={card.date}
-            href={`/day/${card.date}`}
+            href={card.date === today ? `/record` : `/day/${card.date}`}
             className="block bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
           >
             {/* 日付と達成度バッジ */}
