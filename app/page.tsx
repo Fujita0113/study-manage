@@ -55,6 +55,7 @@ interface DailyReportCardData {
   achievedTodos: AchievedTodoItem[];
   learningItems: string[]; // 旧形式用（do_textから抽出）
   journalExcerpt?: string;
+  satisfaction?: number; // 1〜5
 }
 
 export default async function HomePage() {
@@ -151,6 +152,7 @@ export default async function HomePage() {
       achievedTodos,
       learningItems,
       journalExcerpt: createJournalExcerpt(record.journalText),
+      satisfaction: record.satisfaction,
     });
   }
 
@@ -201,6 +203,11 @@ export default async function HomePage() {
                 {card.displayDate}
               </h3>
               <div className="flex items-center gap-2">
+                {card.satisfaction != null && (
+                  <span className="text-xl" title={`満足度: ${['', '最悪', '微妙', '普通', '良い', '最高'][card.satisfaction]}`}>
+                    {['', '😞', '😟', '😐', '🙂', '😄'][card.satisfaction]}
+                  </span>
+                )}
                 {card.recoveryAchieved && (
                   <span className="text-lg" title="リカバリー達成">♥️</span>
                 )}

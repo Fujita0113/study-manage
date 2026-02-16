@@ -49,6 +49,8 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   const [achievedOtherTodoIds, setAchievedOtherTodoIds] = useState<Set<string>>(new Set());
   // リカバリー達成
   const [recoveryAchieved, setRecoveryAchieved] = useState(false);
+  // 満足度（1〜5、未選択はnull）
+  const [satisfaction, setSatisfaction] = useState<number | null>(null);
   // 日報
   const [journal, setJournal] = useState('');
   const [loading, setLoading] = useState(true);
@@ -116,6 +118,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           // 既存データを読み込む
           setJournal(existingData.record.journalText || '');
           setRecoveryAchieved(existingData.record.recoveryAchieved || false);
+          setSatisfaction(existingData.record.satisfaction ?? null);
 
           // 達成TODO一覧を取得
           const todosResponse = await fetch(`/api/daily-records/${existingData.record.id}/todos`);
@@ -259,6 +262,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             doText,
             journalText: journal || undefined,
             recoveryAchieved,
+            satisfaction,
           }),
         });
 
@@ -278,6 +282,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             doText,
             journalText: journal || undefined,
             recoveryAchieved,
+            satisfaction,
           }),
         });
 
@@ -489,6 +494,39 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             rows={4}
             disabled={saving || !isEditable}
           />
+        </section>
+
+        {/* 満足度評価 */}
+        <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">今日の満足度（任意）</h2>
+          <p className="text-sm text-slate-500 mb-4">この1日に対する主観的な満足度を選んでください</p>
+          <div className="flex items-start gap-4">
+            {([
+              { value: 1, emoji: '😞', label: '最悪' },
+              { value: 2, emoji: '😟', label: '微妙' },
+              { value: 3, emoji: '😐', label: '普通' },
+              { value: 4, emoji: '🙂', label: '良い' },
+              { value: 5, emoji: '😄', label: '最高' },
+            ] as const).map(({ value, emoji, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  if (!isEditable || saving) return;
+                  setSatisfaction(prev => prev === value ? null : value);
+                }}
+                disabled={saving || !isEditable}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg border-2 transition-all
+                  ${satisfaction === value
+                    ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-300'
+                    : 'border-transparent bg-gray-50 opacity-40 hover:opacity-70'}
+                  ${(saving || !isEditable) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span className="text-3xl leading-none">{emoji}</span>
+                <span className="text-xs text-slate-500 whitespace-nowrap">{label}</span>
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* 保存ボタン */}

@@ -222,6 +222,23 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
             <p className="text-slate-700 whitespace-pre-wrap">{record.journalText}</p>
           </div>
         )}
+
+        {/* 満足度 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-3">今日の満足度</h2>
+          {record.satisfaction != null ? (
+            <div className="flex items-center gap-3">
+              <span className="text-4xl">
+                {['', '😞', '😟', '😐', '🙂', '😄'][record.satisfaction]}
+              </span>
+              <span className="text-lg font-medium text-slate-700">
+                {['', '最悪', '微妙', '普通', '良い', '最高'][record.satisfaction]}
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">未記録</p>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

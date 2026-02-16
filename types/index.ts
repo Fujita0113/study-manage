@@ -40,6 +40,7 @@ export interface DailyRecord {
   recoveryAchieved?: boolean;
   doText?: string;
   journalText?: string;
+  satisfaction?: number; // 1〜5（NULL許容）
   createdAt: Date;
   updatedAt: Date;
 }

@@ -16,7 +16,7 @@ export async function PATCH(
 
     const { recordId } = await params;
     const body = await request.json();
-    const { achievementLevel, doText, journalText, recoveryAchieved } = body;
+    const { achievementLevel, doText, journalText, recoveryAchieved, satisfaction } = body;
 
     // 更新
     const updatedRecord = await updateDailyRecord(recordId, {
@@ -24,6 +24,7 @@ export async function PATCH(
       doText,
       journalText,
       recoveryAchieved,
+      satisfaction: satisfaction ?? undefined,
     });
 
     return NextResponse.json(updatedRecord);

@@ -60,7 +60,7 @@ type DailyTodoRecordInsert = Database['public']['Tables']['daily_todo_records'][
 /**
  * Supabaseのsnake_case形式をTypeScriptのcamelCase形式に変換
  */
-function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean }): DailyRecord {
+function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean; satisfaction?: number | null }): DailyRecord {
   return {
     id: dbRecord.id,
     userId: dbRecord.user_id,
@@ -69,6 +69,7 @@ function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean 
     recoveryAchieved: dbRecord.recovery_achieved || false,
     doText: dbRecord.do_text || undefined,
     journalText: dbRecord.journal_text || undefined,
+    satisfaction: dbRecord.satisfaction ?? undefined,
     createdAt: new Date(dbRecord.created_at),
     updatedAt: new Date(dbRecord.updated_at),
   };
@@ -478,13 +479,14 @@ export async function createDailyRecord(
   const supabase = await createClient();
 
   // TypeScriptのcamelCaseをSupabaseのsnake_caseに変換
-  const insertData: DailyRecordInsert & { recovery_achieved?: boolean } = {
+  const insertData: DailyRecordInsert & { recovery_achieved?: boolean; satisfaction?: number | null } = {
     user_id: userId,
     date: recordData.date,
     achievement_level: recordData.achievementLevel,
     do_text: recordData.doText || null,
     journal_text: recordData.journalText || null,
     recovery_achieved: recordData.recoveryAchieved || false,
+    satisfaction: recordData.satisfaction ?? null,
   };
 
   const query = supabase.from('daily_records');
@@ -525,6 +527,9 @@ export async function updateDailyRecord(
   if (updates.recoveryAchieved !== undefined) {
     updateData.recovery_achieved = updates.recoveryAchieved;
   }
+  if (updates.satisfaction !== undefined) {
+    updateData.satisfaction = updates.satisfaction ?? null;
+  }
 
   const { data, error } = await supabase
     .from('daily_records')
@@ -536,7 +541,7 @@ export async function updateDailyRecord(
   if (error) throw error;
   if (!data) throw new Error(`Daily record not found: ${recordId}`);
 
-  const dbData = data as typeof data & { recovery_achieved?: boolean };
+  const dbData = data as typeof data & { recovery_achieved?: boolean; satisfaction?: number | null };
 
   return {
     id: dbData.id,
@@ -546,6 +551,7 @@ export async function updateDailyRecord(
     recoveryAchieved: dbData.recovery_achieved || false,
     doText: dbData.do_text || undefined,
     journalText: dbData.journal_text || undefined,
+    satisfaction: dbData.satisfaction ?? undefined,
     createdAt: new Date(dbData.created_at),
     updatedAt: new Date(dbData.updated_at),
   };
