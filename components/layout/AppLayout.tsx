@@ -72,13 +72,13 @@ export function AppLayout({
 
       {/* リカバリーモードバナー（モード中のみ表示） */}
       {recoveryStatus?.isActive && recoveryStatus?.goal && (
-        <div className="fixed top-16 left-64 right-0 z-10">
+        <div className="fixed top-12 left-60 right-0 z-10">
           <RecoveryModeBanner recoveryGoal={recoveryStatus.goal} />
         </div>
       )}
 
-      <main className={`ml-64 mt-16 p-6 ${recoveryStatus?.isActive ? 'pt-20' : ''}`}>
-        <div>
+      <main className={`ml-60 pt-12 min-h-screen pb-20 ${recoveryStatus?.isActive ? 'mt-10' : ''}`}>
+        <div className="max-w-5xl mx-auto p-8 lg:p-12">
           {children}
         </div>
       </main>

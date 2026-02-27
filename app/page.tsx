@@ -197,16 +197,16 @@ export default async function HomePage() {
       canShowRecoveryButton={canShowRecoveryButton}
     >
       {/* デイリーレポートカードグリッド */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {dailyReportCards.map((card) => (
           <Link
             key={card.date}
             href={card.date === today ? `/record` : `/day/${card.date}`}
-            className="block bg-white rounded-xl border border-[#E9E9E7] p-6 hover:bg-[#F9F9F8] transition-colors"
+            className="block bg-white rounded-lg border border-[#E9E9E7] p-4 hover:bg-[#F9F9F8] transition-colors shadow-sm"
           >
             {/* 日付と達成度バッジ */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-800">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="text-base font-semibold text-[#37352F]">
                 {card.displayDate}
               </h3>
               <div className="flex items-center gap-2">
@@ -219,8 +219,8 @@ export default async function HomePage() {
                   <span className="text-lg" title="リカバリー達成">♥️</span>
                 )}
                 <span
-                  className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                  style={{ backgroundColor: getLevelColor(card.achievementLevel) }}
+                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  style={{ color: getLevelColor(card.achievementLevel), backgroundColor: `${getLevelColor(card.achievementLevel)}15` }}
                 >
                   {getLevelLabel(card.achievementLevel)}
                 </span>
@@ -228,16 +228,16 @@ export default async function HomePage() {
             </div>
 
             {/* 達成TODO / 学習内容 */}
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-slate-700 mb-2">
+            <div className="mb-3">
+              <h4 className="text-xs font-semibold text-[#9B9A97] mb-1.5 uppercase tracking-wider">
                 {card.achievedTodos.length > 0 ? '達成したTODO' : '学習内容'}
               </h4>
               {card.achievedTodos.length > 0 ? (
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {card.achievedTodos.slice(0, 4).map((todo) => (
-                    <li key={todo.id} className="flex items-start gap-2 text-sm text-slate-600">
-                      <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="line-clamp-1">
+                    <li key={todo.id} className="flex items-start gap-1.5 text-sm text-[#37352F]">
+                      <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-1 leading-snug">
                         {todo.level && (
                           <span className={`${levelColorMap[todo.level]} font-medium mr-1`}>
                             [{todo.level.charAt(0).toUpperCase()}]
@@ -248,19 +248,19 @@ export default async function HomePage() {
                     </li>
                   ))}
                   {card.achievedTodos.length > 4 && (
-                    <li className="text-sm text-slate-400 pl-6">
+                    <li className="text-xs text-[#9B9A97] pl-5">
                       ...他{card.achievedTodos.length - 4}件
                     </li>
                   )}
                 </ul>
               ) : card.learningItems.length === 0 ? (
-                <p className="text-sm text-slate-400">学習内容の記録なし</p>
+                <p className="text-sm text-[#9B9A97]">学習内容の記録なし</p>
               ) : (
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {card.learningItems.map((item, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-slate-600">
-                      <span className="text-slate-400 mt-0.5">•</span>
-                      <span className="line-clamp-1">{item}</span>
+                    <li key={index} className="flex items-start gap-1.5 text-sm text-[#37352F]">
+                      <span className="text-[#9B9A97] mt-0.5">•</span>
+                      <span className="line-clamp-1 leading-snug">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -269,9 +269,9 @@ export default async function HomePage() {
 
             {/* 日報抜粋 */}
             {card.journalExcerpt && (
-              <div className="pt-4 border-t border-gray-100">
-                <h4 className="text-sm font-medium text-slate-700 mb-2">日報</h4>
-                <p className="text-sm text-slate-600 line-clamp-2">
+              <div className="pt-3 border-t border-[#E9E9E7]">
+                <h4 className="text-xs font-semibold text-[#9B9A97] mb-1.5 uppercase tracking-wider">日報</h4>
+                <p className="text-sm text-[#37352F] line-clamp-2 leading-snug">
                   {card.journalExcerpt}
                 </p>
               </div>

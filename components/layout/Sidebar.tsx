@@ -18,7 +18,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-[#F7F7F5] flex flex-col">
+    <div className="fixed left-0 top-0 h-full w-60 bg-[#F7F7F5] flex flex-col border-r border-[#E9E9E7]">
       {/* ロゴ */}
       <div className="p-6">
         <div className="flex items-center gap-2">
@@ -30,8 +30,8 @@ export function Sidebar() {
       </div>
 
       {/* ナビゲーション */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
+      <nav className="flex-1 px-3 py-4">
+        <ul className="space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -41,7 +41,7 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   className={`
-                    flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                    flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm
                     ${isActive
                       ? 'bg-[#EFEFED] text-[#37352F] font-semibold'
                       : 'text-slate-600 hover:bg-[#EFEFED] hover:text-[#37352F]'
