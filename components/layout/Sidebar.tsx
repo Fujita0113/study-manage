@@ -18,9 +18,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="fixed left-0 top-0 h-full w-64 bg-[#F7F7F5] flex flex-col">
       {/* ロゴ */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">P</span>
@@ -35,7 +35,7 @@ export function Sidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <li key={item.href}>
                 <Link
@@ -43,13 +43,13 @@ export function Sidebar() {
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                     ${isActive
-                      ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-700'
-                      : 'text-slate-600 hover:bg-gray-50 hover:text-slate-800'
+                      ? 'bg-[#EFEFED] text-[#37352F] font-semibold'
+                      : 'text-slate-600 hover:bg-[#EFEFED] hover:text-[#37352F]'
                     }
                   `}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-700' : 'text-slate-500'}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#37352F]' : 'text-slate-500'}`} />
+                  <span className={`${isActive ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
                 </Link>
               </li>
             );

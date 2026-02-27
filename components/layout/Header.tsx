@@ -23,7 +23,7 @@ export function Header({
   const showRecoveryButton = canShowRecoveryButton && recoveryStatus?.goal && !recoveryStatus?.isActive;
 
   return (
-    <div className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-10">
+    <div className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-[#E9E9E7] flex items-center justify-between px-6 z-10">
       {/* 左側: ページタイトル */}
       <h1 className="text-xl font-semibold text-slate-800">{pageTitle}</h1>
 

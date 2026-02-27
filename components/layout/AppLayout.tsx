@@ -60,7 +60,7 @@ export function AppLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white text-[#37352F]">
       <Sidebar />
       <Header
         pageTitle={pageTitle}

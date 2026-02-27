@@ -202,7 +202,7 @@ export default async function HomePage() {
           <Link
             key={card.date}
             href={card.date === today ? `/record` : `/day/${card.date}`}
-            className="block bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+            className="block bg-white rounded-xl border border-[#E9E9E7] p-6 hover:bg-[#F9F9F8] transition-colors"
           >
             {/* 日付と達成度バッジ */}
             <div className="flex items-center justify-between mb-4">
