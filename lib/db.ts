@@ -261,7 +261,7 @@ export async function createInitialGoals(
 ): Promise<void> {
   const startTime = Date.now();
   console.log('[DB] createInitialGoals: Start', { userId, timestamp: new Date().toISOString() });
-  
+
   const supabase = await createClient();
 
   // 1. goals テーブルに3つの目標を挿入
@@ -272,7 +272,7 @@ export async function createInitialGoals(
   ];
 
   console.log('[DB] Inserting goals:', goalsToInsert.map(g => ({ level: g.level, description: g.description?.substring(0, 50) })));
-  
+
   const insertStartTime = Date.now();
   const { data: insertedGoals, error: goalsError } = await supabase
     .from('goals')
@@ -292,7 +292,7 @@ export async function createInitialGoals(
   console.log('[DB] Goals inserted successfully:', insertedGoals?.map(g => ({ id: g.id, level: g.level, created_at: g.created_at })));
 
   // 2. goal_history_slots に初期スロットを作成
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDate(new Date());
   const slotData: GoalHistorySlotInsert = {
     user_id: userId,
     bronze_goal: bronze,
@@ -304,7 +304,7 @@ export async function createInitialGoals(
   };
 
   console.log('[DB] Inserting goal history slot:', { start_date: slotData.start_date, change_reason: slotData.change_reason });
-  
+
   const slotInsertStartTime = Date.now();
   const { data: insertedSlot, error: slotError } = await supabase
     .from('goal_history_slots')
@@ -322,7 +322,7 @@ export async function createInitialGoals(
   }
 
   console.log('[DB] Goal history slot inserted successfully:', insertedSlot?.[0] ? { id: insertedSlot[0].id, start_date: insertedSlot[0].start_date } : null);
-  
+
   const totalTime = Date.now() - startTime;
   console.log(`[DB] createInitialGoals: Complete (total time: ${totalTime}ms)`);
 }
@@ -568,9 +568,10 @@ export async function updateDailyRecord(
  * @returns 現在の連続日数
  */
 export async function calculateStreakFromRecords(
-  userId: string
+  userId: string,
+  preFetchedRecords?: DailyRecord[]
 ): Promise<number> {
-  const records = await getDailyRecords(userId);
+  const records = preFetchedRecords || await getDailyRecords(userId);
 
   if (records.length === 0) {
     return 0;
@@ -631,8 +632,8 @@ function countConsecutiveDays(
       minLevel === 'bronze'
         ? ['bronze', 'silver', 'gold'].includes(record.achievementLevel)
         : minLevel === 'silver'
-        ? ['silver', 'gold'].includes(record.achievementLevel)
-        : record.achievementLevel === 'gold';
+          ? ['silver', 'gold'].includes(record.achievementLevel)
+          : record.achievementLevel === 'gold';
 
     if (meetsLevel) {
       count++;
@@ -646,10 +647,11 @@ function countConsecutiveDays(
 }
 
 export async function getSuggestion(
-  userId: string
+  userId: string,
+  preFetchedRecords?: DailyRecord[]
 ): Promise<Suggestion | null> {
   // Check for level up suggestion (exactly 14, 28, 42... consecutive days at or above each level)
-  const records = await getDailyRecords(userId);
+  const records = preFetchedRecords || await getDailyRecords(userId);
 
   // Check Gold level up (Gold連続日数が14の倍数かつ14日以上)
   const goldStreak = countConsecutiveDays(records, 'gold');
@@ -763,7 +765,7 @@ export async function createGoalHistorySlot(
   userId: string
 ): Promise<GoalHistorySlot> {
   const supabase = await createClient();
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDate(new Date());
 
   // 1. 現在進行中のスロットを取得
   const currentSlot = await getCurrentGoalSlot(userId);
@@ -839,7 +841,7 @@ export async function endGoalHistorySlot(
   // 昨日の日付をend_dateに設定（新しいスロットは今日から始まるため）
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const endDate = yesterday.toISOString().split('T')[0];
+  const endDate = formatDate(yesterday);
 
   const updateData: GoalHistorySlotUpdate = {
     end_date: endDate,

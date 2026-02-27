@@ -12,10 +12,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * 日付を YYYY-MM-DD 形式の文字列に変換
+ * 日付を YYYY-MM-DD 形式の文字列に変換（JST基準）
+ * toISOString() はUTCを返すため、Asia/Tokyo タイムゾーンを明示して変換する
  */
 export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(date);
 }
 
 /**

@@ -70,78 +70,84 @@ export default async function HomePage() {
   const startDate = formatDate(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000));
   const records = await getDailyRecords(user.id, { startDate, endDate });
 
-  // 3. 各記録のTODO達成情報を取得
+  // 3. 各記録のTODO達成情報を一括で取得
   const supabase = await createClient();
   const dailyReportCards: DailyReportCardData[] = [];
 
+  const recordIds = records.map(r => r.id);
+
+  // TodoRecordsの一括取得
+  const { data: allTodoRecords } = recordIds.length > 0
+    ? await supabase.from('daily_todo_records').select('*').in('daily_record_id', recordIds)
+    : { data: [] };
+  const todoRecords = allTodoRecords || [];
+
+  // Goal Todoの一括取得
+  const goalTodoIds = todoRecords.filter(r => r.todo_type === 'goal' && r.is_achieved).map(r => r.todo_id);
+  const { data: allGoalTodos } = goalTodoIds.length > 0
+    ? await supabase.from('goal_todos').select('id, content, goal_id').in('id', goalTodoIds)
+    : { data: [] };
+  const goalTodos = allGoalTodos || [];
+
+  // Goal Level の一括取得
+  const goalIds = [...new Set(goalTodos.map(t => t.goal_id))];
+  const { data: allGoals } = goalIds.length > 0
+    ? await supabase.from('goals').select('id, level').in('id', goalIds)
+    : { data: [] };
+  const goalLevelMap = new Map((allGoals || []).map(g => [g.id, g.level as GoalLevel]));
+
+  // Other Todoの一括取得
+  const otherTodoIds = todoRecords.filter(r => r.todo_type === 'other' && r.is_achieved).map(r => r.todo_id);
+  const { data: allOtherTodos } = otherTodoIds.length > 0
+    ? await supabase.from('other_todos').select('id, content').in('id', otherTodoIds)
+    : { data: [] };
+  const otherTodos = allOtherTodos || [];
+
+  // Map作成
+  const goalTodoMap = new Map(goalTodos.map(t => [t.id, t]));
+  const otherTodoMap = new Map(otherTodos.map(t => [t.id, t]));
+  const todoRecordsByRecordId = new Map<string, typeof todoRecords>();
+  todoRecords.forEach(r => {
+    if (!todoRecordsByRecordId.has(r.daily_record_id)) {
+      todoRecordsByRecordId.set(r.daily_record_id, []);
+    }
+    todoRecordsByRecordId.get(r.daily_record_id)!.push(r);
+  });
+
   for (const record of records) {
-    // TODO達成記録を取得
-    const todoRecords = await getDailyTodoRecords(record.id);
+    const recordTodos = todoRecordsByRecordId.get(record.id) || [];
     const achievedTodos: AchievedTodoItem[] = [];
 
-    if (todoRecords.length > 0) {
-      // Goal TODOのコンテンツを取得
-      const goalTodoIds = todoRecords
-        .filter(r => r.todoType === 'goal' && r.isAchieved)
-        .map(r => r.todoId);
-
-      if (goalTodoIds.length > 0) {
-        const { data: goalTodos } = await supabase
-          .from('goal_todos')
-          .select('id, content, goal_id')
-          .in('id', goalTodoIds);
-
-        if (goalTodos) {
-          // goal_idからlevelを取得
-          const goalIds = [...new Set(goalTodos.map(t => t.goal_id))];
-          const { data: goals } = await supabase
-            .from('goals')
-            .select('id, level')
-            .in('id', goalIds);
-
-          const goalLevelMap = new Map(goals?.map(g => [g.id, g.level as GoalLevel]) || []);
-
-          goalTodos.forEach(t => {
-            achievedTodos.push({
-              id: t.id,
-              content: t.content,
-              level: goalLevelMap.get(t.goal_id),
-              type: 'goal',
-            });
+    recordTodos.forEach(r => {
+      if (r.todo_type === 'goal' && r.is_achieved) {
+        const t = goalTodoMap.get(r.todo_id);
+        if (t) {
+          achievedTodos.push({
+            id: t.id,
+            content: t.content,
+            level: goalLevelMap.get(t.goal_id),
+            type: 'goal',
+          });
+        }
+      } else if (r.todo_type === 'other' && r.is_achieved) {
+        const t = otherTodoMap.get(r.todo_id);
+        if (t) {
+          achievedTodos.push({
+            id: t.id,
+            content: t.content,
+            type: 'other',
           });
         }
       }
-
-      // Other TODOのコンテンツを取得
-      const otherTodoIds = todoRecords
-        .filter(r => r.todoType === 'other' && r.isAchieved)
-        .map(r => r.todoId);
-
-      if (otherTodoIds.length > 0) {
-        const { data: otherTodos } = await supabase
-          .from('other_todos')
-          .select('id, content')
-          .in('id', otherTodoIds);
-
-        if (otherTodos) {
-          otherTodos.forEach(t => {
-            achievedTodos.push({
-              id: t.id,
-              content: t.content,
-              type: 'other',
-            });
-          });
-        }
-      }
-    }
+    });
 
     // 旧形式用: doTextから学習内容を抽出（改行区切り、最大3件）
     const learningItems = record.doText
       ? record.doText
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
-          .slice(0, 3)
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .slice(0, 3)
       : [];
 
     dailyReportCards.push({
@@ -159,20 +165,21 @@ export default async function HomePage() {
   // 新しい順にソート
   dailyReportCards.sort((a, b) => b.date.localeCompare(a.date));
 
-  // 4. 提案バナーの表示判定
-  const suggestion = await getSuggestion(user.id);
+  // 4〜8. 非依存のデータ取得を並列化
+  const [
+    suggestion,
+    streakDays,
+    yesterdayStatus,
+    recoveryStatus,
+    todayRecord
+  ] = await Promise.all([
+    getSuggestion(user.id),
+    calculateStreakFromRecords(user.id),
+    checkYesterdayRecord(user.id),
+    getRecoveryModeStatus(user.id),
+    getDailyRecordByDate(today, user.id)
+  ]);
 
-  // 5. ストリークを計算
-  const streakDays = await calculateStreakFromRecords(user.id);
-
-  // 6. 昨日の日報が作成されているかチェック
-  const yesterdayStatus = await checkYesterdayRecord(user.id);
-
-  // 7. リカバリーモードのステータスを取得
-  const recoveryStatus = await getRecoveryModeStatus(user.id);
-
-  // 8. 今日の記録があるかチェック（リカバリーボタン表示判定用）
-  const todayRecord = await getDailyRecordByDate(today, user.id);
   const canShowRecoveryButton = !todayRecord && recoveryStatus.goal !== null;
 
   // レベルの色設定

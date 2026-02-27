@@ -6,6 +6,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { formatDate } from '@/lib/utils';
 import type { Database } from '@/types/database';
 import type {
   Goal,
@@ -187,7 +188,7 @@ async function endGoalHistorySlot(slotId: string): Promise<GoalHistorySlot> {
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const endDate = yesterday.toISOString().split('T')[0];
+  const endDate = formatDate(yesterday);
 
   const { data, error } = await supabase
     .from('goal_history')
@@ -237,7 +238,7 @@ export async function createGoalHistorySlotAction(
   }
 
   // 2. 新しいスロットを作成
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDate(new Date());
 
   const { data, error } = await supabase
     .from('goal_history')

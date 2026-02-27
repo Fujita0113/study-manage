@@ -1,0 +1,13 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] 窶ｺ e2e\home.spec.ts:3:5 窶ｺ login and verify home page loads correctly
+
+[1A[2K[WebServer] 笞 Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[WebServer] Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+[1A[2K  1 passed (14.7s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
