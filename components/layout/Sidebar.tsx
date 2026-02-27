@@ -22,8 +22,8 @@ export function Sidebar() {
       {/* ロゴ */}
       <div className="p-6">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
+          <div className="w-6 h-6 flex items-center justify-center text-lg">
+            📓
           </div>
           <span className="font-semibold text-slate-800">Pepper Dev Journal</span>
         </div>

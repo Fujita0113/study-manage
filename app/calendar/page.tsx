@@ -112,8 +112,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   {record && (
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10 shadow-lg">
                       <div className="font-semibold">{formatDateShort(dateStr)}</div>
-                      <div className="mt-1">
-                        達成度: {getLevelLabel(achievementLevel)}
+                      <div className="mt-1 font-medium">
+                        達成度: {achievementLevel === 'gold' ? '👑 ' : ''}{getLevelLabel(achievementLevel)}
                         {recoveryAchieved && ' + ♥️リカバリー'}
                       </div>
                       {record.journalText && (
@@ -136,23 +136,23 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h3 className="text-sm font-medium text-slate-700 mb-3">凡例</h3>
             <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 font-semibold">
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded shadow-sm border border-gray-100"
                   style={{ backgroundColor: getLevelColor('gold') }}
                 />
-                <span className="text-sm text-slate-600">Gold</span>
+                <span className="text-sm text-slate-800">👑 Gold (最高)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded border border-gray-100"
                   style={{ backgroundColor: getLevelColor('silver') }}
                 />
                 <span className="text-sm text-slate-600">Silver</span>
               </div>
               <div className="flex items-center gap-2">
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded border border-gray-100"
                   style={{ backgroundColor: getLevelColor('bronze') }}
                 />
                 <span className="text-sm text-slate-600">Bronze</span>
@@ -161,9 +161,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 <span className="text-sm">♥️</span>
                 <span className="text-sm text-slate-600">リカバリー達成</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-gray-100" />
-                <span className="text-sm text-slate-600">未記録</span>
+              <div className="flex items-center gap-2 opacity-70">
+                <div className="w-4 h-4 rounded bg-[#F3F4F6] border border-gray-200" />
+                <span className="text-sm text-slate-500">未記録</span>
               </div>
             </div>
           </div>
