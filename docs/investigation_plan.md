@@ -1,34 +1,35 @@
-# Performance Investigation Plan & Implementation
+# /record 画面パフォーマンス調査・修正計画
 
-## Objective
-Investigate and resolve severe performance issues when the Next.js application is deployed to Vercel with Supabase.
+## 1. 調査結果
+`/record` 画面の読み込みが遅い（重い）主な原因は、**クライアントサイド (`RecordPageClient.tsx`) におけるAPIのウォーターフォール（直列実行）** です。
 
-## Findings from Codebase Analysis
-1. **Severe N+1 Query Problem in `app/page.tsx`**:
-   The homepage fetches the past 14 days of records. Inside the `for (const record of records)` loop, it makes 4 separate database queries for each day:
-   - `getDailyTodoRecords(record.id)`
-   - `supabase.from('goal_todos')...`
-   - `supabase.from('goals')...`
-   - `supabase.from('other_todos')...`
-   This results in **56+ sequential database queries** just to render the homepage.
+現在、`useEffect` 内で以下の順にAPIを `await` してデータ取得しています。
 
-2. **Sequential Root-Level Fetches**:
-   At the root of the page, multiple independent asynchronous calls (`getSuggestion`, `calculateStreakFromRecords`, `checkYesterdayRecord`, `getRecoveryModeStatus`, `getDailyRecordByDate`) are awaited sequentially instead of in parallel using `Promise.all()`. Furthermore, both `getSuggestion` and `calculateStreakFromRecords` call `getDailyRecords()` again internally, duplicating identical DB queries.
+1. `GET /api/daily-records?date=...` (日報データの有無チェック)
+2. 1で日報が存在した場合、`GET /api/daily-records/[id]/todos` (達成済TODOの取得)
+3. `GET /api/goals/todos` (目標TODOリストの取得)
+4. `GET /api/other-todos` (その他TODOリストの取得)
 
-## Proposed Changes
-### Components to Refactor
-#### [MODIFY] app/page.tsx
-- Refactor the loop to fetch all related data in bulk. Instead of fetching todos for each record inside the loop:
-  1. Extract all `record.id`s.
-  2. Fetch all `daily_todo_records` matching the extracted IDs in one query using `.in('daily_record_id', recordIds)`.
-  3. Extract all `todo_id`s and fetch all `goal_todos`, `goals`, and `other_todos` in bulk.
-  4. Map the fetched data back to the corresponding daily report cards in memory.
-- Use `Promise.all()` to parallelize independent data fetches (`getRecoveryModeStatus`, `checkYesterdayRecord`, etc.).
+特に 3 と 4 の取得は、1 と 2 の結果に依存しないため、これらを直列で待機する必要はありません。これらが順次実行されることで、通信時間が合算され、画面の初期表示（ローディング解除）までに時間がかかっています。
 
-#### [MODIFY] lib/db.ts
-- Refactor `calculateStreakFromRecords` and `getSuggestion` to accept an optional pre-fetched `records` array parameter, avoiding redundant database calls.
+## 2. 修正計画
+以下の手順で `RecordPageClient.tsx` のデータ取得処理を並列化（Parallelization）します。
 
-## Verification Plan
-### Automated Tests
-- Run `npx playwright test` autonomously after fixes are implemented to ensure no features were broken by the refactoring. The test suite checks UI and functionality, which will cover the rendering of the homepage.
+1. **非依存APIの並列化**
+   `Promise.all` を用い、依存関係のないAPI呼び出しを同時に実行するように修正します。
+   - `fetch('/api/goals/todos')`
+   - `fetch('/api/other-todos')`
+   - `fetch('/api/daily-records?date=...')`
+   
+   上記3つを同時に `Promise.all` で発行します。
 
+2. **依存APIのチェイン**
+   `daily-records` のレスポンスにより、既存のレコードが存在する場合は、その情報を用いて `fetch('/api/daily-records/[id]/todos')` を実行します。
+
+3. **ローディング制御**
+   すべての非同期処理が完了したタイミングで `setLoading(false)` を呼び出します。
+
+## 3. 実装手順
+- `app/record/RecordPageClient.tsx` の `loadData` 関数内を修正。
+- 修正後、ビルドエラーがないか確認。
+- 提供されているテストアカウントを使用し、ローカルでE2Eテスト（Playwright）を実行して、既存のテストが壊れていないか、動作が問題ないかを確認します。

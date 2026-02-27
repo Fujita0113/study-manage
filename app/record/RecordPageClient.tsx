@@ -85,8 +85,13 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   useEffect(() => {
     async function loadData() {
       try {
-        // 対象日の記録が既にあるかチェック
-        const existingRecordResponse = await fetch(`/api/daily-records?date=${targetDate}`);
+        // 並列で取得可能なデータを取得
+        const [existingRecordResponse, goalTodosResponse, otherTodosResponse] = await Promise.all([
+          fetch(`/api/daily-records?date=${targetDate}`),
+          fetch('/api/goals/todos'),
+          fetch('/api/other-todos')
+        ]);
+
         if (!existingRecordResponse.ok) {
           throw new Error('Failed to fetch daily record');
         }
@@ -139,15 +144,13 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           }
         }
 
-        // 目標TODOを取得
-        const goalTodosResponse = await fetch('/api/goals/todos');
+        // 目標TODOをセット
         if (goalTodosResponse.ok) {
           const data = await goalTodosResponse.json();
           setGoalTodos(data);
         }
 
-        // その他TODOを取得（アクティブなもののみ）
-        const otherTodosResponse = await fetch('/api/other-todos');
+        // その他TODOをセット
         if (otherTodosResponse.ok) {
           const data = await otherTodosResponse.json();
           setOtherTodos(data);
@@ -535,11 +538,10 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             <button
               onClick={handleSubmit}
               disabled={!canRecord || saving}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                !canRecord || saving
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${!canRecord || saving
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
+                }`}
             >
               {saving ? '保存中...' : isEditMode ? '変更を保存する' : '記録を確定してロックする'}
             </button>
