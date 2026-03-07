@@ -110,12 +110,12 @@ export function getMonthRange(year: number, month: number): { start: Date; end: 
  */
 export function getDaysInMonth(year: number, month: number): Date[] {
   const days: Date[] = [];
-  const { start, end } = getMonthRange(year, month);
-  
+  const { end } = getMonthRange(year, month);
+
   for (let i = 1; i <= end.getDate(); i++) {
     days.push(new Date(year, month - 1, i));
   }
-  
+
   return days;
 }
 

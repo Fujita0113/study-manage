@@ -86,31 +86,62 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
               const record = records.find(r => r.date === dateStr);
               const achievementLevel = record?.achievementLevel || 'none';
               const recoveryAchieved = record?.recoveryAchieved || false;
-              const cellColor = record ? getLevelColor(achievementLevel) : '#F3F4F6';
               const isToday = dateStr === formatDate(new Date());
+
+              // ベース色ではなく完全にクラスで制御する
+              let cellClasses = 'group relative h-24 rounded-lg p-2 transition-all ';
+              let innerContent = null;
+
+              if (achievementLevel === 'gold') {
+                cellClasses += 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border-2 border-amber-500 shadow-lg shadow-amber-500/40 hover:shadow-amber-500/60 ring-1 ring-white/50 inset-0';
+                innerContent = (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <span className="text-4xl text-amber-100">👑</span>
+                  </div>
+                );
+              } else if (achievementLevel === 'silver') {
+                cellClasses += 'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 border border-slate-400 shadow-md shadow-slate-400/30 hover:shadow-slate-400/50';
+                innerContent = (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <span className="text-4xl text-slate-100">✨</span>
+                  </div>
+                );
+              } else if (achievementLevel === 'bronze') {
+                cellClasses += 'bg-[#CD7F32] border border-[#a66628] hover:shadow-md';
+              } else {
+                cellClasses += 'bg-[#F3F4F6] border border-gray-200 hover:border-blue-500 hover:shadow-md';
+              }
 
               return (
                 <Link
                   key={dateStr}
                   href={`/day/${dateStr}`}
-                  className="group relative h-24 border border-gray-200 rounded-lg p-2 hover:border-blue-500 transition-all hover:shadow-md"
-                  style={{ backgroundColor: cellColor }}
+                  className={cellClasses}
                 >
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm font-medium text-slate-700">{date.getDate()}</span>
+                  {innerContent}
+                  <div className="relative flex items-start justify-between z-10">
+                    <span className={`text-sm font-medium ${achievementLevel === 'gold' || achievementLevel === 'bronze' ? 'text-white' : 'text-slate-700'}`}>
+                      {date.getDate()}
+                    </span>
                     <div className="flex items-center gap-1">
                       {recoveryAchieved && (
-                        <span className="text-sm" title="リカバリー達成">♥️</span>
+                        <span className="text-sm drop-shadow-sm" title="リカバリー達成">♥️</span>
+                      )}
+                      {achievementLevel === 'gold' && !recoveryAchieved && (
+                        <span className="text-sm drop-shadow-sm" title="Gold達成">👑</span>
+                      )}
+                      {achievementLevel === 'silver' && !recoveryAchieved && (
+                        <span className="text-sm drop-shadow-sm" title="Silver達成">✨</span>
                       )}
                       {isToday && (
-                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span className={`w-2 h-2 rounded-full ${achievementLevel === 'gold' || achievementLevel === 'bronze' ? 'bg-white' : 'bg-blue-600'}`}></span>
                       )}
                     </div>
                   </div>
 
                   {/* ホバーツールチップ */}
                   {record && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-20 shadow-xl">
                       <div className="font-semibold">{formatDateShort(dateStr)}</div>
                       <div className="mt-1 font-medium">
                         達成度: {achievementLevel === 'gold' ? '👑 ' : ''}{getLevelLabel(achievementLevel)}
@@ -137,24 +168,19 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             <h3 className="text-sm font-medium text-slate-700 mb-3">凡例</h3>
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2 font-semibold">
-                <div
-                  className="w-4 h-4 rounded shadow-sm border border-gray-100"
-                  style={{ backgroundColor: getLevelColor('gold') }}
-                />
-                <span className="text-sm text-slate-800">👑 Gold (最高)</span>
+                <div className="w-6 h-6 rounded shadow-sm shadow-amber-500/40 border-2 border-amber-500 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 flex items-center justify-center">
+                  <span className="text-[10px] text-white">👑</span>
+                </div>
+                <span className="text-sm text-slate-800">Gold (最高)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded border border-gray-100"
-                  style={{ backgroundColor: getLevelColor('silver') }}
-                />
+                <div className="w-6 h-6 rounded shadow-sm shadow-slate-400/30 border border-slate-400 bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 flex items-center justify-center">
+                  <span className="text-[10px]">✨</span>
+                </div>
                 <span className="text-sm text-slate-600">Silver</span>
               </div>
               <div className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded border border-gray-100"
-                  style={{ backgroundColor: getLevelColor('bronze') }}
-                />
+                <div className="w-6 h-6 rounded border border-[#a66628] bg-[#CD7F32]" />
                 <span className="text-sm text-slate-600">Bronze</span>
               </div>
               <div className="flex items-center gap-2">
@@ -162,7 +188,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 <span className="text-sm text-slate-600">リカバリー達成</span>
               </div>
               <div className="flex items-center gap-2 opacity-70">
-                <div className="w-4 h-4 rounded bg-[#F3F4F6] border border-gray-200" />
+                <div className="w-6 h-6 rounded bg-[#F3F4F6] border border-gray-200" />
                 <span className="text-sm text-slate-500">未記録</span>
               </div>
             </div>
