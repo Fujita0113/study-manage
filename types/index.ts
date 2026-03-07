@@ -136,3 +136,14 @@ export interface GoalHistory {
   gold: GoalCard[];
 }
 
+// Timeline Todo
+export interface TimelineTodo {
+  id: string;
+  userId: string;
+  timeTag: string; // HH:MM
+  content: string;
+  isDeleted: boolean;
+  deleteReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

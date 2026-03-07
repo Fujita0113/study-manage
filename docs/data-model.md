@@ -218,7 +218,7 @@ interface DailyRecord {
 #### TypeScript型定義
 
 ```typescript
-type TodoType = 'goal' | 'other';
+type TodoType = 'goal' | 'other' | 'routine';
 
 interface DailyTodoRecord {
   id: string;                    // UUID
@@ -236,8 +236,8 @@ interface DailyTodoRecord {
 |------------|-----|------|------------|--------------|
 | `id` | string (UUID) | ✓ | - | 自動生成 |
 | `daily_record_id` | string (UUID) | ✓ | - | 外部キー制約（DailyRecord.id） |
-| `todo_type` | TodoType | ✓ | - | 'goal' または 'other' |
-| `todo_id` | string (UUID) | ✓ | - | goal_todos.id または other_todos.id |
+| `todo_type` | TodoType | ✓ | - | 'goal', 'other', 'routine' のいずれか |
+| `todo_id` | string (UUID) | ✓ | - | goal_todos.id または other_todos.id または timeline_todos.id |
 | `is_achieved` | boolean | ✓ | false | true/false |
 | `created_at` | Date | ✓ | 現在時刻 | - |
 
@@ -249,7 +249,8 @@ interface DailyTodoRecord {
 
 - 各日にどのTODOを達成したかを記録
 - `todo_type = 'goal'`の場合、`todo_id`は`goal_todos.id`を参照
-- `todo_type = 'other'`の場合、`todo_id`は`other_todos.id`を参照
+- `todo_type = 'other'`の場合、`todo_id`は`other_todos.id`を参照（廃止予定）
+- `todo_type = 'routine'`の場合、`todo_id`は`timeline_todos.id`を参照
 - ホーム画面のカード表示や日詳細画面での達成TODO一覧表示に使用
 
 ---
@@ -478,7 +479,21 @@ CREATE TABLE goal_todos (
 
 CREATE INDEX idx_goal_todos_goal_id ON goal_todos(goal_id);
 
--- Other Todos テーブル（新規）
+-- Timeline Todos テーブル（新規・マイルーティン用）
+CREATE TABLE timeline_todos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  time_tag TEXT NOT NULL,
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 500),
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  delete_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_timeline_todos_user_id ON timeline_todos(user_id);
+
+-- Other Todos テーブル（廃止予定）
 CREATE TABLE other_todos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -505,11 +520,11 @@ CREATE TABLE daily_records (
   UNIQUE(user_id, date)
 );
 
--- Daily Todo Records テーブル（新規）
+-- Daily Todo Records テーブル
 CREATE TABLE daily_todo_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   daily_record_id UUID NOT NULL REFERENCES daily_records(id) ON DELETE CASCADE,
-  todo_type TEXT NOT NULL CHECK (todo_type IN ('goal', 'other')),
+  todo_type TEXT NOT NULL CHECK (todo_type IN ('goal', 'other', 'routine')),
   todo_id UUID NOT NULL,
   is_achieved BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
