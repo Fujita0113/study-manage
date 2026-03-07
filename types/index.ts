@@ -110,7 +110,7 @@ export interface OtherTodo {
 export interface DailyTodoRecord {
   id: string;
   dailyRecordId: string;
-  todoType: 'goal' | 'other';
+  todoType: 'goal' | 'other' | 'routine';
   todoId: string;
   isAchieved: boolean;
   createdAt: Date;

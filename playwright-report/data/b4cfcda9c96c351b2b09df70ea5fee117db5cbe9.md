@@ -1,0 +1,102 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [active]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - navigation [ref=e6]:
+            - button "previous" [disabled] [ref=e7]:
+              - img "previous" [ref=e8]
+            - generic [ref=e10]:
+              - generic [ref=e11]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e12]:
+              - img "next" [ref=e13]
+          - img
+        - generic [ref=e15]:
+          - link "Next.js 16.1.1 (stale) Turbopack" [ref=e16] [cursor=pointer]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e17]
+            - generic "There is a newer version (16.1.6) available, upgrade recommended!" [ref=e19]: Next.js 16.1.1 (stale)
+            - generic [ref=e20]: Turbopack
+          - img
+      - dialog "Build Error" [ref=e22]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e29]: Build Error
+              - generic [ref=e30]:
+                - button "Copy Error Info" [ref=e31] [cursor=pointer]:
+                  - img [ref=e32]
+                - link "Go to related documentation" [ref=e34] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+                  - img [ref=e35]
+                - button "Attach Node.js inspector" [ref=e37] [cursor=pointer]:
+                  - img [ref=e38]
+            - generic [ref=e47]: "Module not found: Can't resolve './OtherTodoSection'"
+          - generic [ref=e49]:
+            - generic [ref=e51]:
+              - img [ref=e53]
+              - generic [ref=e57]: ./components/todo/index.ts (3:1)
+              - button "Open in editor" [ref=e58] [cursor=pointer]:
+                - img [ref=e60]
+            - generic [ref=e63]:
+              - generic [ref=e64]: Module not found
+              - generic [ref=e65]: ": Can't resolve"
+              - text: "'./OtherTodoSection'"
+              - generic [ref=e66]: 1 |
+              - text: export
+              - generic [ref=e67]: "{"
+              - text: TodoCheckbox
+              - generic [ref=e68]: "}"
+              - text: from './TodoCheckbox';
+              - generic [ref=e69]: 2 |
+              - text: export
+              - generic [ref=e70]: "{"
+              - text: TodoLevelSection
+              - generic [ref=e71]: "}"
+              - text: from './TodoLevelSection'; >
+              - generic [ref=e72]: 3 |
+              - text: export
+              - generic [ref=e73]: "{"
+              - text: OtherTodoSection
+              - generic [ref=e74]: "}"
+              - text: from './OtherTodoSection';
+              - generic [ref=e75]: "|"
+              - text: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              - generic [ref=e76]: 4 |
+              - text: export
+              - generic [ref=e77]: "{"
+              - text: RoutineTodoSection
+              - generic [ref=e78]: "}"
+              - text: from './RoutineTodoSection';
+              - generic [ref=e79]: 5 |
+              - text: export
+              - generic [ref=e80]: "{"
+              - text: TodoAutocomplete
+              - generic [ref=e81]: "}"
+              - text: from './TodoAutocomplete';
+              - generic [ref=e82]: 6 |
+              - text: export
+              - generic [ref=e83]: "{"
+              - text: TodoList
+              - generic [ref=e84]: "}"
+              - text: from './TodoList';
+              - generic [ref=e85]:
+                - text: "Import traces: Client Component Browser: ./components/todo/index.ts [Client Component Browser] ./app/record/RecordPageClient.tsx [Client Component Browser] ./app/record/RecordPageClient.tsx [Server Component] ./app/record/page.tsx [Server Component] Client Component SSR: ./components/todo/index.ts [Client Component SSR] ./app/record/RecordPageClient.tsx [Client Component SSR] ./app/record/RecordPageClient.tsx [Server Component] ./app/record/page.tsx [Server Component]"
+                - link "https://nextjs.org/docs/messages/module-not-found" [ref=e86] [cursor=pointer]:
+                  - /url: https://nextjs.org/docs/messages/module-not-found
+        - generic [ref=e87]: "1"
+        - generic [ref=e88]: "2"
+    - generic [ref=e93] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e94]:
+        - img [ref=e95]
+      - button "Open issues overlay" [ref=e99]:
+        - generic [ref=e100]:
+          - generic [ref=e101]: "0"
+          - generic [ref=e102]: "1"
+        - generic [ref=e103]: Issue
+  - alert [ref=e104]
+```

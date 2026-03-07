@@ -42,7 +42,7 @@ export async function GET(
     // 型を整形して返す
     const records = (data || []).map((record: any) => ({
       id: record.id,
-      todoType: record.todo_type as 'goal' | 'other',
+      todoType: record.todo_type as 'goal' | 'other' | 'routine',
       todoId: record.todo_id,
       isAchieved: record.is_achieved,
     }));
@@ -76,7 +76,7 @@ export async function POST(
     const { recordId } = await params;
     const body = await request.json();
     const { records } = body as {
-      records: { todoType: 'goal' | 'other'; todoId: string; isAchieved: boolean }[];
+      records: { todoType: 'goal' | 'other' | 'routine'; todoId: string; isAchieved: boolean }[];
     };
 
     if (!records || !Array.isArray(records)) {

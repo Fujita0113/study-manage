@@ -21,6 +21,7 @@ import {
   OtherTodo,
   DailyTodoRecord,
   RecoveryModeStatus,
+  TimelineTodo,
 } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
@@ -143,7 +144,7 @@ function toDailyTodoRecord(dbRecord: DailyTodoRecordRow): DailyTodoRecord {
   return {
     id: dbRecord.id,
     dailyRecordId: dbRecord.daily_record_id,
-    todoType: dbRecord.todo_type as 'goal' | 'other',
+    todoType: dbRecord.todo_type as 'goal' | 'other' | 'routine',
     todoId: dbRecord.todo_id,
     isAchieved: dbRecord.is_achieved,
     createdAt: new Date(dbRecord.created_at),
@@ -1191,11 +1192,12 @@ export async function getCompletedTodosByDate(
   date: string
 ): Promise<Array<{
   id: string;
-  todoType: 'goal' | 'other';
+  todoType: 'goal' | 'other' | 'routine';
   todoId: string;
   isAchieved: boolean;
   goalTodo?: GoalTodo;
   otherTodo?: OtherTodo;
+  routineTodo?: TimelineTodo;
 }>> {
   const supabase = await createClient();
 
@@ -1227,6 +1229,7 @@ export async function getCompletedTodosByDate(
     isAchieved: record.is_achieved,
     goalTodo: record.goal_todos ? toGoalTodo(record.goal_todos) : undefined,
     otherTodo: record.other_todos ? toOtherTodo(record.other_todos) : undefined,
+    routineTodo: record.timeline_todos ? undefined : undefined, // TimelineTodo mapping is not strictly handled here since it's an unused DB method
   }));
 }
 
@@ -1235,7 +1238,7 @@ export async function getCompletedTodosByDate(
  */
 export async function saveDailyTodoRecords(
   dailyRecordId: string,
-  records: { todoType: 'goal' | 'other'; todoId: string; isAchieved: boolean }[]
+  records: { todoType: 'goal' | 'other' | 'routine'; todoId: string; isAchieved: boolean }[]
 ): Promise<void> {
   const supabase = await createClient();
 

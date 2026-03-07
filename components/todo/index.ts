@@ -1,5 +1,5 @@
 export { TodoCheckbox } from './TodoCheckbox';
 export { TodoLevelSection } from './TodoLevelSection';
-export { OtherTodoSection } from './OtherTodoSection';
+export { RoutineTodoSection } from './RoutineTodoSection';
 export { TodoAutocomplete } from './TodoAutocomplete';
 export { TodoList } from './TodoList';

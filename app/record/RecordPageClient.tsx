@@ -5,8 +5,8 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { TodoLevelSection, OtherTodoSection } from '@/components/todo';
-import type { GoalLevel, GoalTodo, OtherTodo, AchievementLevel, RecoveryModeStatus } from '@/types';
+import { TodoLevelSection, RoutineTodoSection } from '@/components/todo';
+import type { GoalLevel, GoalTodo, TimelineTodo, AchievementLevel, RecoveryModeStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 // 日付を「2026年2月3日」形式にフォーマット
@@ -42,11 +42,11 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     silver: [],
     gold: [],
   });
-  // その他TODOの状態
-  const [otherTodos, setOtherTodos] = useState<OtherTodo[]>([]);
+  // マイルーティンの状態
+  const [routineTodos, setRoutineTodos] = useState<TimelineTodo[]>([]);
   // 達成済みTODO ID
   const [achievedGoalTodoIds, setAchievedGoalTodoIds] = useState<Set<string>>(new Set());
-  const [achievedOtherTodoIds, setAchievedOtherTodoIds] = useState<Set<string>>(new Set());
+  const [achievedRoutineTodoIds, setAchievedRoutineTodoIds] = useState<Set<string>>(new Set());
   // リカバリー達成
   const [recoveryAchieved, setRecoveryAchieved] = useState(false);
   // 満足度（1〜5、未選択はnull）
@@ -86,10 +86,10 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     async function loadData() {
       try {
         // 並列で取得可能なデータを取得
-        const [existingRecordResponse, goalTodosResponse, otherTodosResponse] = await Promise.all([
+        const [existingRecordResponse, goalTodosResponse, routineTodosResponse] = await Promise.all([
           fetch(`/api/daily-records?date=${targetDate}`),
           fetch('/api/goals/todos'),
-          fetch('/api/other-todos')
+          fetch('/api/timeline-todos')
         ]);
 
         if (!existingRecordResponse.ok) {
@@ -130,17 +130,17 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           if (todosResponse.ok) {
             const todosData = await todosResponse.json();
             const goalTodoIds = new Set<string>();
-            const otherTodoIds = new Set<string>();
+            const routineTodoIds = new Set<string>();
 
             todosData.forEach((todo: any) => {
               if (todo.todoType === 'goal' && todo.isAchieved) {
                 goalTodoIds.add(todo.todoId);
-              } else if (todo.todoType === 'other' && todo.isAchieved) {
-                otherTodoIds.add(todo.todoId);
+              } else if (todo.todoType === 'routine' && todo.isAchieved) {
+                routineTodoIds.add(todo.todoId);
               }
             });
             setAchievedGoalTodoIds(goalTodoIds);
-            setAchievedOtherTodoIds(otherTodoIds);
+            setAchievedRoutineTodoIds(routineTodoIds);
           }
         }
 
@@ -150,10 +150,10 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           setGoalTodos(data);
         }
 
-        // その他TODOをセット
-        if (otherTodosResponse.ok) {
-          const data = await otherTodosResponse.json();
-          setOtherTodos(data);
+        // マイルーティンをセット
+        if (routineTodosResponse.ok) {
+          const data = await routineTodosResponse.json();
+          setRoutineTodos(data);
         }
 
         setLoading(false);
@@ -179,9 +179,9 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     });
   };
 
-  // その他TODOのチェック変更
-  const handleOtherTodoChange = (todoId: string, checked: boolean) => {
-    setAchievedOtherTodoIds(prev => {
+  // マイルーティンのチェック変更
+  const handleRoutineTodoChange = (todoId: string, checked: boolean) => {
+    setAchievedRoutineTodoIds(prev => {
       const next = new Set(prev);
       if (checked) {
         next.add(todoId);
@@ -190,29 +190,6 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
       }
       return next;
     });
-  };
-
-  // その他TODOを追加
-  const handleAddOtherTodo = async (content: string) => {
-    try {
-      const response = await fetch('/api/other-todos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create other todo');
-      }
-
-      const newTodo = await response.json();
-      setOtherTodos(prev => [...prev, newTodo]);
-      // 新規追加したTODOはチェック済みにする
-      setAchievedOtherTodoIds(prev => new Set(prev).add(newTodo.id));
-    } catch (error) {
-      console.error('Failed to add other todo:', error);
-      alert('TODOの追加に失敗しました');
-    }
   };
 
   // 達成したTODO内容をdo_textとして生成
@@ -226,10 +203,10 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
         .forEach(t => achievedContents.push(`[${level.toUpperCase()}] ${t.content}`));
     });
 
-    // その他TODO
-    otherTodos
-      .filter(t => achievedOtherTodoIds.has(t.id))
-      .forEach(t => achievedContents.push(t.content));
+    // マイルーティン
+    routineTodos
+      .filter(t => achievedRoutineTodoIds.has(t.id))
+      .forEach(t => achievedContents.push(`[${t.timeTag}] ${t.content}`));
 
     return achievedContents.join('\n') || 'なし';
   };
@@ -298,7 +275,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
       }
 
       // 達成記録を保存
-      const todoRecords: { todoType: 'goal' | 'other'; todoId: string; isAchieved: boolean }[] = [];
+      const todoRecords: { todoType: 'goal' | 'routine'; todoId: string; isAchieved: boolean }[] = [];
 
       // 目標TODO
       (['bronze', 'silver', 'gold'] as GoalLevel[]).forEach(level => {
@@ -311,11 +288,11 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
         });
       });
 
-      // その他TODO
-      otherTodos.forEach(t => {
-        if (achievedOtherTodoIds.has(t.id)) {
+      // マイルーティン
+      routineTodos.forEach(t => {
+        if (achievedRoutineTodoIds.has(t.id)) {
           todoRecords.push({
-            todoType: 'other',
+            todoType: 'routine',
             todoId: t.id,
             isAchieved: true,
           });
@@ -471,17 +448,16 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           </div>
         </section>
 
-        {/* その他TODO */}
+        {/* マイルーティン */}
         <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">その他TODO</h2>
+          <h2 className="text-xl font-semibold text-slate-800 mb-4">マイルーティン</h2>
           <p className="text-sm text-slate-600 mb-4">
-            目標以外に達成したことを記録できます
+            日々の習慣として達成した項目にチェックを入れてください
           </p>
-          <OtherTodoSection
-            todos={otherTodos}
-            achievedTodoIds={achievedOtherTodoIds}
-            onTodoChange={handleOtherTodoChange}
-            onAddTodo={handleAddOtherTodo}
+          <RoutineTodoSection
+            todos={routineTodos}
+            achievedTodoIds={achievedRoutineTodoIds}
+            onTodoChange={handleRoutineTodoChange}
             disabled={saving || !isEditable}
           />
         </section>
@@ -539,8 +515,8 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               onClick={handleSubmit}
               disabled={!canRecord || saving}
               className={`px-6 py-3 rounded-lg font-semibold transition-colors ${!canRecord || saving
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
             >
               {saving ? '保存中...' : isEditMode ? '変更を保存する' : '記録を確定してロックする'}

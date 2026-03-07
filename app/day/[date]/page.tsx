@@ -25,7 +25,7 @@ interface AchievedTodo {
   id: string;
   content: string;
   level?: GoalLevel;
-  type: 'goal' | 'other';
+  type: 'goal' | 'other' | 'routine';
 }
 
 export default async function DayDetailPage({ params }: DayDetailPageProps) {
@@ -102,23 +102,23 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
       }
     }
 
-    // Other TODOのコンテンツを取得
-    const otherTodoIds = todoRecords
-      .filter(r => r.todoType === 'other' && r.isAchieved)
+    // Routine TODOのコンテンツを取得
+    const routineTodoIds = todoRecords
+      .filter(r => r.todoType === 'routine' && r.isAchieved)
       .map(r => r.todoId);
 
-    if (otherTodoIds.length > 0) {
-      const { data: otherTodos } = await supabase
-        .from('other_todos')
-        .select('id, content')
-        .in('id', otherTodoIds);
+    if (routineTodoIds.length > 0) {
+      const { data: routineTodos } = await supabase
+        .from('timeline_todos')
+        .select('id, content, time_tag')
+        .in('id', routineTodoIds);
 
-      if (otherTodos) {
-        otherTodos.forEach(t => {
+      if (routineTodos) {
+        routineTodos.forEach(t => {
           achievedTodos.push({
             id: t.id,
-            content: t.content,
-            type: 'other',
+            content: `[${t.time_tag}] ${t.content}`,
+            type: 'routine',
           });
         });
       }
@@ -126,18 +126,18 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
   }
 
   // レベル別にグループ化
-  const todosByLevel: Record<GoalLevel | 'other', AchievedTodo[]> = {
+  const todosByLevel: Record<GoalLevel | 'routine', AchievedTodo[]> = {
     bronze: achievedTodos.filter(t => t.level === 'bronze'),
     silver: achievedTodos.filter(t => t.level === 'silver'),
     gold: achievedTodos.filter(t => t.level === 'gold'),
-    other: achievedTodos.filter(t => t.type === 'other'),
+    routine: achievedTodos.filter(t => t.type === 'routine'),
   };
 
-  const levelConfig: Record<GoalLevel | 'other', { label: string; bgColor: string; textColor: string }> = {
+  const levelConfig: Record<GoalLevel | 'routine', { label: string; bgColor: string; textColor: string }> = {
     bronze: { label: 'Bronze', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
     silver: { label: 'Silver', bgColor: 'bg-gray-50', textColor: 'text-gray-600' },
     gold: { label: 'Gold', bgColor: 'bg-yellow-50', textColor: 'text-yellow-600' },
-    other: { label: 'その他', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+    routine: { label: 'マイルーティン', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
   };
 
   return (
@@ -182,7 +182,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-slate-800 mb-4">達成したTODO</h2>
             <div className="space-y-4">
-              {(['bronze', 'silver', 'gold', 'other'] as const).map(level => {
+              {(['bronze', 'silver', 'gold', 'routine'] as const).map(level => {
                 const todos = todosByLevel[level];
                 if (todos.length === 0) return null;
                 const config = levelConfig[level];
