@@ -1,0 +1,129 @@
+﻿
+Running 6 tests using 4 workers
+
+[1A[2K[1/6] [chromium] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page
+[1A[2K[2/6] [firefox] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page
+[1A[2K[3/6] [chromium] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo
+[1A[2K  1) [firefox] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\yufuj\AppData\Local\ms-playwright\firefox-1509\firefox\firefox.exe
+    笊披武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・    笊・Looks like Playwright Test or Playwright was just installed or updated. 笊・    笊・Please run the following command to download new browsers:              笊・    笊・                                                                        笊・    笊・    npx playwright install                                              笊・    笊・                                                                        笊・    笊・<3 Playwright Team                                                      笊・    笊壺武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・
+
+[1A[2K[4/6] [firefox] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo
+[1A[2K  2) [firefox] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\yufuj\AppData\Local\ms-playwright\firefox-1509\firefox\firefox.exe
+    笊披武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・    笊・Looks like Playwright Test or Playwright was just installed or updated. 笊・    笊・Please run the following command to download new browsers:              笊・    笊・                                                                        笊・    笊・    npx playwright install                                              笊・    笊・                                                                        笊・    笊・<3 Playwright Team                                                      笊・    笊壺武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・
+
+
+node.exe : [1A[2K[2
+m[WebServer] [22m[33
+m[1m笞[22m[39m Cros
+s origin request detec
+ted from 127.0.0.1 to 
+/_next/* resource. In 
+a future major version
+ of Next.js, you will 
+need to explicitly con
+figure "allowedDevOrig
+ins" in next.config to
+ allow this.
+発生場所 行:1 文字:1
++ & "C:\Program Files\
+nodejs/node.exe" "C:\P
+rogram Files\nodejs/no
+de_mo ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: ([1A[2K[   
+ 2m[We... to allow    
+ this.:String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+[2m[WebServer] [22mR
+ead more: https://next
+js.org/docs/app/api-re
+ference/config/next-co
+nfig-js/allowedDevOrig
+ins
+[1A[2K[5/6] [webkit] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page
+[1A[2K  3) [webkit] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\yufuj\AppData\Local\ms-playwright\webkit-2248\Playwright.exe
+    笊披武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・    笊・Looks like Playwright Test or Playwright was just installed or updated. 笊・    笊・Please run the following command to download new browsers:              笊・    笊・                                                                        笊・    笊・    npx playwright install                                              笊・    笊・                                                                        笊・    笊・<3 Playwright Team                                                      笊・    笊壺武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・
+
+[1A[2K[6/6] [webkit] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo
+[1A[2K  4) [webkit] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\yufuj\AppData\Local\ms-playwright\webkit-2248\Playwright.exe
+    笊披武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・    笊・Looks like Playwright Test or Playwright was just installed or updated. 笊・    笊・Please run the following command to download new browsers:              笊・    笊・                                                                        笊・    笊・    npx playwright install                                              笊・    笊・                                                                        笊・    笊・<3 Playwright Team                                                      笊・    笊壺武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・
+
+[1A[2K  5) [chromium] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('h1').filter({ hasText: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' })
+    Expected: visible
+    Error: strict mode violation: locator('h1').filter({ hasText: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' }) resolved to 2 elements:
+        1) <h1 class="text-sm font-semibold text-[#37352F] hover:bg-[#EFEFED] px-2 py-1 rounded cursor-pointer">騾ｱ谺｡謖ｯ繧願ｿ斐ｊ</h1> aka getByRole('heading', { name: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' }).first()
+        2) <h1 class="text-2xl font-bold text-slate-800 tracking-tight">騾ｱ谺｡謖ｯ繧願ｿ斐ｊ</h1> aka getByRole('main').getByRole('heading', { name: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' })
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('h1').filter({ hasText: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' })[22m
+
+
+      26 |         // Verify page header
+      27 |         const pageHeader = page.locator('h1', { hasText: '騾ｱ谺｡謖ｯ繧願ｿ斐ｊ' });
+    > 28 |         await expect(pageHeader).toBeVisible();
+         |                                  ^
+      29 |
+      30 |         // Verify Summary Section
+      31 |         const summaryHeader = page.locator('h2', { hasText: '騾ｱ谺｡繧ｵ繝槭Μ繝ｼ' });
+        at C:\Users\yufuj\dev\study-manage\e2e\weekly-review.spec.ts:28:34
+
+    Error Context: test-results\weekly-review-Weekly-Revie-7a6fc-s-of-the-weekly-review-page-chromium\error-context.md
+
+
+[1A[2K  6) [chromium] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('h2').filter({ hasText: '螟画峩譯医Γ繝｢' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('h2').filter({ hasText: '螟画峩譯医Γ繝｢' })[22m
+
+
+      54 |
+      55 |         const memoHeader = page.locator('h2', { hasText: '螟画峩譯医Γ繝｢' });
+    > 56 |         await expect(memoHeader).toBeVisible();
+         |                                  ^
+      57 |
+      58 |         // Find the textarea for the memo
+      59 |         const memoTextarea = page.locator('textarea[placeholder="莉企ｱ豌励▼縺・◆縺薙→縲∵擂騾ｱ縺ｮ逶ｮ讓吝､画峩譯医↑縺ｩ繧偵Γ繝｢縺励※縺翫″縺ｾ縺励ｇ縺・.."]');
+        at C:\Users\yufuj\dev\study-manage\e2e\weekly-review.spec.ts:56:34
+
+    Error Context: test-results\weekly-review-Weekly-Revie-f3c72-ow-adding-a-new-change-memo-chromium\error-context.md
+
+
+[1A[2K  6 failed
+    [chromium] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+    [chromium] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+    [firefox] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+    [firefox] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+    [webkit] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page 
+    [webkit] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo 
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m

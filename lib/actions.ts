@@ -11,6 +11,7 @@ import type { Database } from '@/types/database';
 import type {
   Goal,
   GoalLevel,
+  AchievementLevel,
   GoalChangeReason,
   DailyRecord,
   GoalHistorySlot,
@@ -20,9 +21,9 @@ type GoalRow = Database['public']['Tables']['goals']['Row'];
 type GoalUpdate = Database['public']['Tables']['goals']['Update'];
 type DailyRecordRow = Database['public']['Tables']['daily_records']['Row'];
 type DailyRecordInsert = Database['public']['Tables']['daily_records']['Insert'];
-type GoalHistoryRow = Database['public']['Tables']['goal_history']['Row'];
-type GoalHistoryInsert = Database['public']['Tables']['goal_history']['Insert'];
-type GoalHistoryUpdate = Database['public']['Tables']['goal_history']['Update'];
+type GoalHistoryRow = Database['public']['Tables']['goal_history_slots']['Row'];
+type GoalHistoryInsert = Database['public']['Tables']['goal_history_slots']['Insert'];
+type GoalHistoryUpdate = Database['public']['Tables']['goal_history_slots']['Update'];
 
 // ==================== Goals ====================
 
@@ -103,7 +104,7 @@ export async function getDailyRecordByDateAction(
     id: row.id,
     userId: row.user_id,
     date: row.date,
-    achievementLevel: row.achievement_level,
+    achievementLevel: row.achievement_level as AchievementLevel,
     doText: row.do_text || undefined,
     journalText: row.journal_text || undefined,
     createdAt: new Date(row.created_at),
@@ -137,7 +138,7 @@ export async function createDailyRecordAction(
     id: row.id,
     userId: row.user_id,
     date: row.date,
-    achievementLevel: row.achievement_level,
+    achievementLevel: row.achievement_level as AchievementLevel,
     doText: row.do_text || undefined,
     journalText: row.journal_text || undefined,
     createdAt: new Date(row.created_at),
@@ -156,7 +157,7 @@ export async function getCurrentGoalSlotAction(
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('goal_history')
+    .from('goal_history_slots')
     .select('*')
     .eq('user_id', userId)
     .is('end_date', null)
@@ -191,7 +192,7 @@ async function endGoalHistorySlot(slotId: string): Promise<GoalHistorySlot> {
   const endDate = formatDate(yesterday);
 
   const { data, error } = await supabase
-    .from('goal_history')
+    .from('goal_history_slots')
     .update({
       end_date: endDate,
       updated_at: new Date().toISOString(),
@@ -241,7 +242,7 @@ export async function createGoalHistorySlotAction(
   const today = formatDate(new Date());
 
   const { data, error } = await supabase
-    .from('goal_history')
+    .from('goal_history_slots')
     .insert({
       user_id: userId,
       bronze_goal: bronzeGoal,

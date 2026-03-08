@@ -61,7 +61,7 @@ type DailyTodoRecordInsert = Database['public']['Tables']['daily_todo_records'][
 /**
  * Supabaseのsnake_case形式をTypeScriptのcamelCase形式に変換
  */
-function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean; satisfaction?: number | null }): DailyRecord {
+function toDailyRecord(dbRecord: DailyRecordRow): DailyRecord {
   return {
     id: dbRecord.id,
     userId: dbRecord.user_id,

@@ -22,8 +22,11 @@ export type Database = {
           do_text: string | null
           id: string
           journal_text: string | null
+          recovery_achieved: boolean | null
+          satisfaction: number | null
           updated_at: string
           user_id: string
+          work_duration_minutes: number | null
         }
         Insert: {
           achievement_level?: string
@@ -32,8 +35,11 @@ export type Database = {
           do_text?: string | null
           id?: string
           journal_text?: string | null
+          recovery_achieved?: boolean | null
+          satisfaction?: number | null
           updated_at?: string
           user_id: string
+          work_duration_minutes?: number | null
         }
         Update: {
           achievement_level?: string
@@ -42,8 +48,107 @@ export type Database = {
           do_text?: string | null
           id?: string
           journal_text?: string | null
+          recovery_achieved?: boolean | null
+          satisfaction?: number | null
           updated_at?: string
           user_id?: string
+          work_duration_minutes?: number | null
+        }
+        Relationships: []
+      }
+      daily_todo_records: {
+        Row: {
+          created_at: string
+          daily_record_id: string
+          id: string
+          is_achieved: boolean
+          todo_id: string
+          todo_type: string
+        }
+        Insert: {
+          created_at?: string
+          daily_record_id: string
+          id?: string
+          is_achieved?: boolean
+          todo_id: string
+          todo_type: string
+        }
+        Update: {
+          created_at?: string
+          daily_record_id?: string
+          id?: string
+          is_achieved?: boolean
+          todo_id?: string
+          todo_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_todo_records_daily_record_id_fkey"
+            columns: ["daily_record_id"]
+            isOneToOne: false
+            referencedRelation: "daily_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_todo_records_daily_record_id_fkey"
+            columns: ["daily_record_id"]
+            isOneToOne: false
+            referencedRelation: "daily_records_with_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_change_log: {
+        Row: {
+          change_reason: string
+          created_at: string
+          goal_type: string
+          id: string
+          new_content: string
+          old_content: string
+          user_id: string
+        }
+        Insert: {
+          change_reason: string
+          created_at?: string
+          goal_type: string
+          id?: string
+          new_content: string
+          old_content: string
+          user_id: string
+        }
+        Update: {
+          change_reason?: string
+          created_at?: string
+          goal_type?: string
+          id?: string
+          new_content?: string
+          old_content?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goal_change_memo: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          week_start_date?: string
         }
         Relationships: []
       }
@@ -95,6 +200,7 @@ export type Database = {
           goal_type: string
           id: string
           level: number
+          recovery_goal: string | null
           started_at: string
           updated_at: string
           user_id: string
@@ -107,6 +213,7 @@ export type Database = {
           goal_type: string
           id?: string
           level: number
+          recovery_goal?: string | null
           started_at: string
           updated_at?: string
           user_id: string
@@ -119,16 +226,52 @@ export type Database = {
           goal_type?: string
           id?: string
           level?: number
+          recovery_goal?: string | null
           started_at?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
+      goal_todos: {
+        Row: {
+          content: string
+          created_at: string
+          goal_id: string
+          id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_todos_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           created_at: string
-          description: string
+          description: string | null
           id: string
           level: string
           updated_at: string
@@ -136,7 +279,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description: string
+          description?: string | null
           id?: string
           level: string
           updated_at?: string
@@ -144,10 +287,73 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string
+          description?: string | null
           id?: string
           level?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      other_todos: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_archived: boolean
+          last_achieved_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      timeline_todos: {
+        Row: {
+          content: string
+          created_at: string | null
+          delete_reason: string | null
+          id: string
+          is_deleted: boolean
+          time_tag: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          delete_reason?: string | null
+          id?: string
+          is_deleted?: boolean
+          time_tag: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          delete_reason?: string | null
+          id?: string
+          is_deleted?: boolean
+          time_tag?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -156,17 +362,50 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          recovery_goal: string | null
+          recovery_mode_activated_date: string | null
+          recovery_mode_active: boolean | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id: string
+          recovery_goal?: string | null
+          recovery_mode_activated_date?: string | null
+          recovery_mode_active?: boolean | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          recovery_goal?: string | null
+          recovery_mode_activated_date?: string | null
+          recovery_mode_active?: boolean | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      weekly_review_access_log: {
+        Row: {
+          created_at: string
+          edit_unlock_date: string
+          id: string
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          edit_unlock_date: string
+          id?: string
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string
+          edit_unlock_date?: string
+          id?: string
+          user_id?: string
+          week_start_date?: string
         }
         Relationships: []
       }

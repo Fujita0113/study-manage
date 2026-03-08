@@ -147,3 +147,59 @@ export interface TimelineTodo {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Weekly Review Summary
+export interface WeeklyReviewSummary {
+  currentWeekStats: {
+    totalRecords: number;
+    bronzeAchieved: number;
+    silverAchieved: number;
+    goldAchieved: number;
+  };
+  previousWeekStats: {
+    totalRecords: number;
+    bronzeAchieved: number;
+    silverAchieved: number;
+    goldAchieved: number;
+  };
+}
+
+// Todo Analysis
+export interface TodoAnalysisItem {
+  todoId: string;
+  content: string;
+  type: 'goal' | 'routine';
+  goalLevel?: GoalLevel; // goal_todoの場合のみ
+  totalCount: number;
+  achievedCount: number;
+  achievementRate: number; // 0-100
+}
+
+// Goal Change Memo
+export interface GoalChangeMemo {
+  id: string;
+  userId: string;
+  weekStartDate: string;
+  content: string;
+  createdAt: Date;
+}
+
+// Weekly Review Access Log
+export interface WeeklyReviewAccessLog {
+  id: string;
+  userId: string;
+  weekStartDate: string;
+  editUnlockDate: string;
+  createdAt: Date;
+}
+
+// Goal Change Log
+export interface GoalChangeLog {
+  id: string;
+  userId: string;
+  goalType: GoalLevel;
+  oldContent: string;
+  newContent: string;
+  changeReason: string;
+  createdAt: Date;
+}

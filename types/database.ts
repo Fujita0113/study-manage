@@ -6,221 +6,427 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
-      user_settings: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      goals: {
-        Row: {
-          id: string
-          user_id: string
-          level: 'bronze' | 'silver' | 'gold'
-          description: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          level: 'bronze' | 'silver' | 'gold'
-          description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          level?: 'bronze' | 'silver' | 'gold'
-          description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       daily_records: {
         Row: {
-          id: string
-          user_id: string
+          achievement_level: string
+          created_at: string
           date: string
-          achievement_level: 'none' | 'bronze' | 'silver' | 'gold'
           do_text: string | null
+          id: string
           journal_text: string | null
-          created_at: string
+          recovery_achieved: boolean | null
+          satisfaction: number | null
           updated_at: string
+          user_id: string
+          work_duration_minutes: number | null
         }
         Insert: {
-          id?: string
-          user_id: string
+          achievement_level?: string
+          created_at?: string
           date: string
-          achievement_level: 'none' | 'bronze' | 'silver' | 'gold'
           do_text?: string | null
+          id?: string
           journal_text?: string | null
-          created_at?: string
+          recovery_achieved?: boolean | null
+          satisfaction?: number | null
           updated_at?: string
+          user_id: string
+          work_duration_minutes?: number | null
         }
         Update: {
-          id?: string
-          user_id?: string
+          achievement_level?: string
+          created_at?: string
           date?: string
-          achievement_level?: 'none' | 'bronze' | 'silver' | 'gold'
           do_text?: string | null
+          id?: string
           journal_text?: string | null
-          created_at?: string
+          recovery_achieved?: boolean | null
+          satisfaction?: number | null
           updated_at?: string
-        }
-      }
-      streaks: {
-        Row: {
-          id: string
-          user_id: string
-          current_streak: number
-          longest_streak: number
-          last_recorded_date: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          current_streak?: number
-          longest_streak?: number
-          last_recorded_date?: string | null
-          updated_at?: string
-        }
-        Update: {
-          id?: string
           user_id?: string
-          current_streak?: number
-          longest_streak?: number
-          last_recorded_date?: string | null
-          updated_at?: string
+          work_duration_minutes?: number | null
         }
+        Relationships: []
       }
-      goal_history: {
+      daily_todo_records: {
         Row: {
-          id: string
-          user_id: string
-          bronze_goal: string
-          silver_goal: string
-          gold_goal: string
-          start_date: string
-          end_date: string | null
-          change_reason: 'bronze_14days' | 'silver_14days' | 'gold_14days' | '7days_4fails' | 'initial'
           created_at: string
-          updated_at: string
+          daily_record_id: string
+          id: string
+          is_achieved: boolean
+          todo_id: string
+          todo_type: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          bronze_goal: string
-          silver_goal: string
-          gold_goal: string
-          start_date: string
-          end_date?: string | null
-          change_reason: 'bronze_14days' | 'silver_14days' | 'gold_14days' | '7days_4fails' | 'initial'
           created_at?: string
-          updated_at?: string
+          daily_record_id: string
+          id?: string
+          is_achieved?: boolean
+          todo_id: string
+          todo_type: string
         }
         Update: {
+          created_at?: string
+          daily_record_id?: string
+          id?: string
+          is_achieved?: boolean
+          todo_id?: string
+          todo_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_todo_records_daily_record_id_fkey"
+            columns: ["daily_record_id"]
+            isOneToOne: false
+            referencedRelation: "daily_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_todo_records_daily_record_id_fkey"
+            columns: ["daily_record_id"]
+            isOneToOne: false
+            referencedRelation: "daily_records_with_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_change_log: {
+        Row: {
+          change_reason: string
+          created_at: string
+          goal_type: string
+          id: string
+          new_content: string
+          old_content: string
+          user_id: string
+        }
+        Insert: {
+          change_reason: string
+          created_at?: string
+          goal_type: string
+          id?: string
+          new_content: string
+          old_content: string
+          user_id: string
+        }
+        Update: {
+          change_reason?: string
+          created_at?: string
+          goal_type?: string
+          id?: string
+          new_content?: string
+          old_content?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goal_change_memo: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
           id?: string
           user_id?: string
-          bronze_goal?: string
-          silver_goal?: string
-          gold_goal?: string
-          start_date?: string
-          end_date?: string | null
-          change_reason?: 'bronze_14days' | 'silver_14days' | 'gold_14days' | '7days_4fails' | 'initial'
-          created_at?: string
-          updated_at?: string
+          week_start_date?: string
         }
+        Relationships: []
+      }
+      goal_history_slots: {
+        Row: {
+          bronze_goal: string
+          change_reason: string
+          created_at: string
+          end_date: string | null
+          gold_goal: string
+          id: string
+          silver_goal: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bronze_goal: string
+          change_reason: string
+          created_at?: string
+          end_date?: string | null
+          gold_goal: string
+          id?: string
+          silver_goal: string
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bronze_goal?: string
+          change_reason?: string
+          created_at?: string
+          end_date?: string | null
+          gold_goal?: string
+          id?: string
+          silver_goal?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       goal_level_history: {
         Row: {
-          id: string
-          user_id: string
-          goal_type: 'bronze' | 'silver' | 'gold'
-          level: number
-          goal_content: string
-          started_at: string
-          ended_at: string | null
-          change_reason: 'initial' | 'level_up' | 'level_down'
+          change_reason: string
           created_at: string
+          ended_at: string | null
+          goal_content: string
+          goal_type: string
+          id: string
+          level: number
+          recovery_goal: string | null
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          change_reason: string
+          created_at?: string
+          ended_at?: string | null
+          goal_content: string
+          goal_type: string
+          id?: string
+          level: number
+          recovery_goal?: string | null
+          started_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          change_reason?: string
+          created_at?: string
+          ended_at?: string | null
+          goal_content?: string
+          goal_type?: string
+          id?: string
+          level?: number
+          recovery_goal?: string | null
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goal_todos: {
+        Row: {
+          content: string
+          created_at: string
+          goal_id: string
+          id: string
+          sort_order: number
           updated_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          goal_type: 'bronze' | 'silver' | 'gold'
-          level: number
-          goal_content: string
-          started_at: string
-          ended_at?: string | null
-          change_reason: 'initial' | 'level_up' | 'level_down'
+          content: string
           created_at?: string
+          goal_id: string
+          id?: string
+          sort_order?: number
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          goal_type?: 'bronze' | 'silver' | 'gold'
-          level?: number
-          goal_content?: string
-          started_at?: string
-          ended_at?: string | null
-          change_reason?: 'initial' | 'level_up' | 'level_down'
+          content?: string
           created_at?: string
+          goal_id?: string
+          id?: string
+          sort_order?: number
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "goal_todos_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          level: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      other_todos: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_archived: boolean
+          last_achieved_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_achieved_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       timeline_todos: {
         Row: {
-          id: string
-          user_id: string
-          time_tag: string
           content: string
-          is_deleted: boolean
+          created_at: string | null
           delete_reason: string | null
+          id: string
+          is_deleted: boolean
+          time_tag: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          delete_reason?: string | null
+          id?: string
+          is_deleted?: boolean
+          time_tag: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          delete_reason?: string | null
+          id?: string
+          is_deleted?: boolean
+          time_tag?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
           created_at: string
+          id: string
+          recovery_goal: string | null
+          recovery_mode_activated_date: string | null
+          recovery_mode_active: boolean | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          time_tag: string
-          content: string
-          is_deleted?: boolean
-          delete_reason?: string | null
           created_at?: string
+          id: string
+          recovery_goal?: string | null
+          recovery_mode_activated_date?: string | null
+          recovery_mode_active?: boolean | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          time_tag?: string
-          content?: string
-          is_deleted?: boolean
-          delete_reason?: string | null
           created_at?: string
+          id?: string
+          recovery_goal?: string | null
+          recovery_mode_activated_date?: string | null
+          recovery_mode_active?: boolean | null
           updated_at?: string
         }
+        Relationships: []
+      }
+      weekly_review_access_log: {
+        Row: {
+          created_at: string
+          edit_unlock_date: string
+          id: string
+          user_id: string
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          edit_unlock_date: string
+          id?: string
+          user_id: string
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string
+          edit_unlock_date?: string
+          id?: string
+          user_id?: string
+          week_start_date?: string
+        }
+        Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      daily_records_with_goals: {
+        Row: {
+          achievement_level: string | null
+          bronze_goal: string | null
+          created_at: string | null
+          date: string | null
+          do_text: string | null
+          gold_goal: string | null
+          id: string | null
+          journal_text: string | null
+          silver_goal: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
@@ -228,5 +434,131 @@ export interface Database {
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

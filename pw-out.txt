@@ -1,0 +1,37 @@
+
+Running 2 tests using 2 workers
+
+[2m[WebServer] [22m[33m[1m⚠[22m[39m Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[2m[WebServer] [22mRead more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+  ✓  2 [chromium] › e2e\weekly-review.spec.ts:21:9 › Weekly Review Page › should render all sections of the weekly review page (6.9s)
+  ✘  1 [chromium] › e2e\weekly-review.spec.ts:47:9 › Weekly Review Page › should allow adding a new change memo (12.0s)
+
+
+  1) [chromium] › e2e\weekly-review.spec.ts:47:9 › Weekly Review Page › should allow adding a new change memo 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('p').filter({ hasText: 'Playwright E2E Test Memo 1772940224635' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('p').filter({ hasText: 'Playwright E2E Test Memo 1772940224635' })[22m
+
+
+      67 |         // Verify the memo appears in the list
+      68 |         const newMemoText = page.locator('p', { hasText: testMemo });
+    > 69 |         await expect(newMemoText).toBeVisible();
+         |                                   ^
+      70 |     });
+      71 | });
+      72 |
+        at C:\Users\yufuj\dev\study-manage\e2e\weekly-review.spec.ts:69:35
+
+    Error Context: test-results\weekly-review-Weekly-Revie-f3c72-ow-adding-a-new-change-memo-chromium\error-context.md
+
+  1 failed
+    [chromium] › e2e\weekly-review.spec.ts:47:9 › Weekly Review Page › should allow adding a new change memo 
+  1 passed (17.9s)

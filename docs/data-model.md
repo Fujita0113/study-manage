@@ -299,6 +299,137 @@ interface SuggestionDisplayLog {
 
 ---
 
+### 8. GoalLevelHistory（目標レベル履歴）
+
+自動・手動によるレベルアップ・レベルダウンの履歴を管理します。
+
+#### TypeScript型定義
+
+```typescript
+type GoalChangeReason = 'initial' | 'level_up' | 'level_down';
+
+interface GoalLevelHistory {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  goal_type: GoalLevel;          // 目標レベル種別（bronze/silver/gold）
+  level: number;                 // レベル（Lv.1, Lv.2...）
+  goal_content: string;          // 目標内容
+  started_at: Date;              // 開始日時
+  ended_at?: Date;               // 終了日時（NULL=現在継続中）
+  change_reason: GoalChangeReason; // 変更理由
+  created_at: Date;              // 作成日時
+  updated_at: Date;              // 最終更新日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `goal_type` | GoalLevel | ✓ | - | 'bronze', 'silver', 'gold' のいずれか |
+| `level` | number | ✓ | 1 | 1以上の整数 |
+| `goal_content` | string | ✓ | - | 1-500文字 |
+| `started_at` | Date | ✓ | - | 変更日時 |
+| `ended_at` | Date | - | null | 終了日時 |
+| `change_reason` | GoalChangeReason | ✓ | - | 'initial', 'level_up', 'level_down' のいずれか |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+| `updated_at` | Date | ✓ | 現在時刻 | 更新時に自動更新 |
+
+---
+
+### 9. GoalChangeMemo（変更案メモ）
+
+週の途中で気づいた目標変更のメモを管理します。
+
+#### TypeScript型定義
+
+```typescript
+interface GoalChangeMemo {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  week_start_date: string;       // 週の開始日（月曜日の日付 YYYY-MM-DD形式）
+  content: string;               // メモ内容
+  created_at: Date;              // 作成日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `week_start_date` | string | ✓ | - | YYYY-MM-DD形式 |
+| `content` | string | ✓ | - | 1-1000文字 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+
+---
+
+### 10. WeeklyReviewAccessLog（週次振り返りアクセスログ）
+
+週次振り返りページのアクセスと編集ウィンドウを管理します。
+
+#### TypeScript型定義
+
+```typescript
+interface WeeklyReviewAccessLog {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  week_start_date: string;       // 週の開始日（月曜日の日付 YYYY-MM-DD形式）
+  edit_unlock_date: string;      // 編集ウィンドウが開いた日付（YYYY-MM-DD形式）
+  created_at: Date;              // 作成日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `week_start_date` | string | ✓ | - | YYYY-MM-DD形式 |
+| `edit_unlock_date` | string | ✓ | - | YYYY-MM-DD形式 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+
+#### 制約
+- UNIQUE制約: `(user_id, week_start_date)`
+
+---
+
+### 11. GoalChangeLog（目標変更履歴）
+
+ユーザーが週次振り返りページ等で自身で目標内容を更新した時の理由を記録します。
+
+#### TypeScript型定義
+
+```typescript
+interface GoalChangeLog {
+  id: string;                    // UUID
+  user_id: string;               // 外部キー: User.id
+  goal_type: GoalLevel;          // 目標レベル種別（bronze/silver/gold）
+  old_content: string;           // 変更前の目標内容
+  new_content: string;           // 変更後の目標内容
+  change_reason: string;         // 変更理由（自由記述）
+  created_at: Date;              // 作成日時
+}
+```
+
+#### フィールド詳細
+
+| フィールド名 | 型 | 必須 | デフォルト値 | バリデーション |
+|------------|-----|------|------------|--------------|
+| `id` | string (UUID) | ✓ | - | 自動生成 |
+| `user_id` | string (UUID) | ✓ | - | 外部キー制約（User.id） |
+| `goal_type` | GoalLevel | ✓ | - | 'bronze', 'silver', 'gold' |
+| `old_content` | string | ✓ | - | - |
+| `new_content` | string | ✓ | - | - |
+| `change_reason` | string | ✓ | - | 1文字以上 |
+| `created_at` | Date | ✓ | 現在時刻 | - |
+
+---
+
 ## エンティティ間のリレーションシップ（ERD）
 
 ```mermaid
@@ -307,6 +438,10 @@ erDiagram
     User ||--o{ OtherTodo : "has"
     User ||--o{ DailyRecord : "has"
     User ||--o{ SuggestionDisplayLog : "has"
+    User ||--o{ GoalLevelHistory : "has"
+    User ||--o{ GoalChangeMemo : "has"
+    User ||--o{ WeeklyReviewAccessLog : "has"
+    User ||--o{ GoalChangeLog : "has"
     Goal ||--o{ GoalTodo : "has"
     DailyRecord ||--o{ DailyTodoRecord : "has"
 
@@ -371,6 +506,45 @@ erDiagram
         SuggestionType suggestion_type
         GoalLevel target_level
         string display_date
+        Date created_at
+    }
+
+    GoalLevelHistory {
+        string id PK
+        string user_id FK
+        GoalLevel goal_type
+        int level
+        string goal_content
+        Date started_at
+        Date ended_at
+        GoalChangeReason change_reason
+        Date created_at
+        Date updated_at
+    }
+
+    GoalChangeMemo {
+        string id PK
+        string user_id FK
+        string week_start_date
+        string content
+        Date created_at
+    }
+
+    WeeklyReviewAccessLog {
+        string id PK
+        string user_id FK
+        string week_start_date
+        string edit_unlock_date
+        Date created_at
+    }
+
+    GoalChangeLog {
+        string id PK
+        string user_id FK
+        GoalLevel goal_type
+        string old_content
+        string new_content
+        string change_reason
         Date created_at
     }
 ```
@@ -546,6 +720,60 @@ CREATE TABLE suggestion_display_log (
 
 CREATE INDEX idx_suggestion_display_log_user_date ON suggestion_display_log(user_id, display_date);
 
+-- Goal Level History テーブル
+CREATE TABLE goal_level_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('bronze', 'silver', 'gold')),
+  level INTEGER NOT NULL CHECK (level >= 1),
+  goal_content TEXT NOT NULL CHECK (char_length(goal_content) BETWEEN 1 AND 500),
+  started_at TIMESTAMPTZ NOT NULL,
+  ended_at TIMESTAMPTZ,
+  change_reason TEXT NOT NULL CHECK (change_reason IN ('initial', 'level_up', 'level_down')),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  CONSTRAINT valid_date_range CHECK (ended_at IS NULL OR ended_at >= started_at)
+);
+
+CREATE INDEX idx_goal_level_history_user_id ON goal_level_history(user_id);
+CREATE INDEX idx_goal_level_history_dates ON goal_level_history(user_id, started_at, ended_at);
+
+-- Goal Change Memo テーブル
+CREATE TABLE goal_change_memo (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  week_start_date DATE NOT NULL,
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 1000),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX idx_goal_change_memo_user_week ON goal_change_memo(user_id, week_start_date);
+
+-- Weekly Review Access Log テーブル
+CREATE TABLE weekly_review_access_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  week_start_date DATE NOT NULL,
+  edit_unlock_date DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE(user_id, week_start_date)
+);
+
+CREATE INDEX idx_weekly_review_access_log_user ON weekly_review_access_log(user_id);
+
+-- Goal Change Log テーブル
+CREATE TABLE goal_change_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('bronze', 'silver', 'gold')),
+  old_content TEXT NOT NULL,
+  new_content TEXT NOT NULL,
+  change_reason TEXT NOT NULL CHECK (char_length(change_reason) >= 1),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX idx_goal_change_log_user_type ON goal_change_log(user_id, goal_type);
+
 -- 自動更新トリガー (updated_at)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -560,6 +788,7 @@ CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals FOR EACH ROW EXECU
 CREATE TRIGGER update_goal_todos_updated_at BEFORE UPDATE ON goal_todos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_other_todos_updated_at BEFORE UPDATE ON other_todos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_daily_records_updated_at BEFORE UPDATE ON daily_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_goal_level_history_updated_at BEFORE UPDATE ON goal_level_history FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---

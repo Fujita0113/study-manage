@@ -14,8 +14,8 @@ function toTimelineTodo(row: TimelineTodoRow): TimelineTodo {
         content: row.content,
         isDeleted: row.is_deleted,
         deleteReason: row.delete_reason,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at),
+        createdAt: new Date(row.created_at as string),
+        updatedAt: new Date(row.updated_at as string),
     };
 }
 

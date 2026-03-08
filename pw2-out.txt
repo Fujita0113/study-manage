@@ -1,0 +1,43 @@
+﻿
+Running 2 tests using 2 workers
+
+[1A[2K[1/2] [chromium] 窶ｺ e2e\weekly-review.spec.ts:21:9 窶ｺ Weekly Review Page 窶ｺ should render all sections of the weekly review page
+[1A[2K[2/2] [chromium] 窶ｺ e2e\weekly-review.spec.ts:51:9 窶ｺ Weekly Review Page 窶ｺ should allow adding a new change memo
+node.exe : [1A[2K[2
+m[WebServer] [22m[33
+m[1m笞[22m[39m Cros
+s origin request detec
+ted from 127.0.0.1 to 
+/_next/* resource. In 
+a future major version
+ of Next.js, you will 
+need to explicitly con
+figure "allowedDevOrig
+ins" in next.config to
+ allow this.
+発生場所 行:1 文字:1
++ & "C:\Program Files\
+nodejs/node.exe" "C:\P
+rogram Files\nodejs/no
+de_mo ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: ([1A[2K[   
+ 2m[We... to allow    
+ this.:String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+[2m[WebServer] [22mR
+ead more: https://next
+js.org/docs/app/api-re
+ference/config/next-co
+nfig-js/allowedDevOrig
+ins
+
