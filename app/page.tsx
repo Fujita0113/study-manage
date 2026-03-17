@@ -21,7 +21,9 @@ import { requireAuth } from '@/lib/auth/server';
 import type { DailyRecord, GoalLevel } from '@/types';
 import { SuggestionBanner } from '@/components/SuggestionBanner';
 import { YesterdayRecordBanner } from '@/components/YesterdayRecordBanner';
+import { WeeklyReviewReminderDialog } from '@/components/WeeklyReviewReminderDialog';
 import { Check } from 'lucide-react';
+import { startOfWeek, format } from 'date-fns';
 
 // 日付を「2025年12月31日（火）」形式にフォーマット
 function formatDateDisplay(dateStr: string): string {
@@ -182,6 +184,24 @@ export default async function HomePage() {
 
   const canShowRecoveryButton = !todayRecord && recoveryStatus.goal !== null;
 
+  // 週次振り返りリマインドチェック
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=日, 1=月, ...
+  const isAfterMonday = dayOfWeek >= 1; // 月曜日以降
+  let showWeeklyReviewDialog = false;
+  if (isAfterMonday) {
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekStartDateStr = format(weekStart, 'yyyy-MM-dd');
+    const { data: reviewStatus } = await supabase
+      .from('weekly_review_status')
+      .select('completed_at')
+      .eq('user_id', user.id)
+      .eq('week_start_date', weekStartDateStr)
+      .maybeSingle();
+    // 完了済みレコードがない、またはcompleted_atがnullの場合に表示
+    showWeeklyReviewDialog = !reviewStatus || !reviewStatus.completed_at;
+  }
+
   // レベルの色設定
   const levelColorMap: Record<GoalLevel, string> = {
     bronze: 'text-amber-700',
@@ -286,6 +306,11 @@ export default async function HomePage() {
           <YesterdayRecordBanner yesterdayDate={yesterdayStatus.date} />
         )}
         <SuggestionBanner suggestion={suggestion} />
+      </div>
+
+      {/* 週次振り返りリマインドダイアログ */}
+      <div data-weekly-review-dialog>
+        <WeeklyReviewReminderDialog show={showWeeklyReviewDialog} />
       </div>
     </AppLayout>
   );

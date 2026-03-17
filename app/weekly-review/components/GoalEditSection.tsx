@@ -7,11 +7,11 @@ import { logGoalChangeAction } from '@/lib/actions/weekly';
 
 interface GoalEditSectionProps {
     goals: Goal[];
-    canEditSilverBronze: boolean;
+    isMonday: boolean; // true = 月曜日（Bronze/Silver編集可能）
     userId: string;
 }
 
-export function GoalEditSection({ goals, canEditSilverBronze, userId }: GoalEditSectionProps) {
+export function GoalEditSection({ goals, isMonday, userId }: GoalEditSectionProps) {
     const [isPending, startTransition] = useTransition();
     const [editingLevel, setEditingLevel] = useState<GoalLevel | null>(null);
     const [editContent, setEditContent] = useState('');
@@ -74,7 +74,7 @@ export function GoalEditSection({ goals, canEditSilverBronze, userId }: GoalEdit
             {sortedGoals.map(goal => {
                 const isEditing = editingLevel === goal.level;
                 const isGold = goal.level === 'gold';
-                const canEdit = isGold || canEditSilverBronze;
+                const canEdit = isGold || isMonday;
 
                 // 色設定
                 const styles = {

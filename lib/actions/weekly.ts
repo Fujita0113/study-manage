@@ -1,171 +1,130 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { Database } from '@/types/database';
-import type { GoalLevel, WeeklyReviewSummary, TodoAnalysisItem, GoalChangeMemo, WeeklyReviewAccessLog, GoalChangeLog } from '@/types';
-import { formatDate } from '@/lib/utils';
-import { subDays, parseISO, addDays } from 'date-fns';
+import type { GoalLevel, GoalChangeMemo } from '@/types';
+import { addDays, parseISO, format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
-type DailyRecordRow = Database['public']['Tables']['daily_records']['Row'];
+// ==================== 難易度メモ取得 ====================
 
-/**
- * 年月日の文字列(YYYY-MM-DD)から前の週の開始日を取得
- */
-function getPreviousWeekStartDate(weekStartDate: string): string {
-    const date = parseISO(weekStartDate);
-    return formatDate(subDays(date, 7));
+export interface DifficultyMemoItem {
+    date: string;
+    displayDate: string;
+    memo: string | null;
 }
 
 /**
- * 1. 週次サマリーの取得
+ * 指定週の難易度メモ一覧を取得（月曜→日曜）
  */
-export async function getWeeklyReviewSummaryAction(
+export async function getDifficultyMemosAction(
     userId: string,
     weekStartDate: string
-): Promise<WeeklyReviewSummary> {
+): Promise<DifficultyMemoItem[]> {
     const supabase = await createClient();
-    const prevWeekStartDate = getPreviousWeekStartDate(weekStartDate);
+    const weekStart = parseISO(weekStartDate);
+    const weekEnd = addDays(weekStart, 6);
 
-    // 対象週の終了日（開始日から6日後）
-    const weekEndDate = formatDate(addDays(parseISO(weekStartDate), 6));
-    const prevWeekEndDate = formatDate(subDays(parseISO(weekStartDate), 1));
-
-    // Current Week Records
-    const { data: currentRecords } = await supabase
+    const { data: records } = await supabase
         .from('daily_records')
-        .select('achievement_level')
+        .select('date, difficulty_memo')
         .eq('user_id', userId)
         .gte('date', weekStartDate)
-        .lte('date', weekEndDate);
+        .lte('date', format(weekEnd, 'yyyy-MM-dd'))
+        .order('date', { ascending: true });
 
-    // Previous Week Records
-    const { data: prevRecords } = await supabase
-        .from('daily_records')
-        .select('achievement_level')
-        .eq('user_id', userId)
-        .gte('date', prevWeekStartDate)
-        .lte('date', prevWeekEndDate);
+    // 7日分のメモリストを作成（メモなしの日も含む）
+    const memos: DifficultyMemoItem[] = [];
+    for (let i = 0; i < 7; i++) {
+        const date = addDays(weekStart, i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const displayDate = format(date, 'M月d日（E）', { locale: ja });
+        const record = records?.find(r => r.date === dateStr);
 
-    const calculateStats = (records: any[] | null) => {
-        if (!records) return { totalRecords: 0, bronzeAchieved: 0, silverAchieved: 0, goldAchieved: 0 };
-        return {
-            totalRecords: records.length,
-            bronzeAchieved: records.filter(r => ['bronze', 'silver', 'gold'].includes(r.achievement_level)).length,
-            silverAchieved: records.filter(r => ['silver', 'gold'].includes(r.achievement_level)).length,
-            goldAchieved: records.filter(r => r.achievement_level === 'gold').length,
-        };
-    };
+        memos.push({
+            date: dateStr,
+            displayDate,
+            memo: (record as any)?.difficulty_memo || null,
+        });
+    }
 
-    return {
-        currentWeekStats: calculateStats(currentRecords),
-        previousWeekStats: calculateStats(prevRecords),
-    };
+    return memos;
+}
+
+// ==================== Gold妥当性アラート ====================
+
+export interface GoldAlertItem {
+    todoContent: string;
+    weeksNotAchieved: number;
+    type: 'not_achieved';
 }
 
 /**
- * 2. TODO別達成状況分析
+ * Gold目標の妥当性チェック
+ * 過去3週間にわたり一度も達成されていないGoal TodoをN週間未達成として警告する
  */
-export async function getTodoAnalysisAction(
-    userId: string,
-    weekStartDate: string
-): Promise<TodoAnalysisItem[]> {
+export async function getGoldValidityAlertsAction(
+    userId: string
+): Promise<GoldAlertItem[]> {
     const supabase = await createClient();
-    const weekEndDate = formatDate(addDays(parseISO(weekStartDate), 6));
 
-    // 1. その週のdaily_recordsを取得
+    // Gold目標のTodoを取得
+    const { data: goals } = await supabase
+        .from('goals')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('level', 'gold');
+
+    if (!goals || goals.length === 0) return [];
+
+    const goldGoalIds = goals.map(g => g.id);
+
+    const { data: goldTodos } = await supabase
+        .from('goal_todos')
+        .select('id, content')
+        .in('goal_id', goldGoalIds);
+
+    if (!goldTodos || goldTodos.length === 0) return [];
+
+    // 過去3週間分の日報IDを取得
+    const threeWeeksAgo = format(addDays(new Date(), -21), 'yyyy-MM-dd');
     const { data: dailyRecords } = await supabase
         .from('daily_records')
         .select('id')
         .eq('user_id', userId)
-        .gte('date', weekStartDate)
-        .lte('date', weekEndDate);
+        .gte('date', threeWeeksAgo);
 
-    if (!dailyRecords || dailyRecords.length === 0) {
-        return [];
-    }
+    if (!dailyRecords || dailyRecords.length === 0) return [];
 
     const recordIds = dailyRecords.map(r => r.id);
 
-    // 2. その週の全てに紐づく daily_todo_records を取得
+    // 各Gold Todoが達成されたかチェック
     const { data: todoRecords } = await supabase
         .from('daily_todo_records')
-        .select('*')
-        .in('daily_record_id', recordIds);
+        .select('todo_id')
+        .in('daily_record_id', recordIds)
+        .eq('todo_type', 'goal')
+        .eq('is_achieved', true)
+        .in('todo_id', goldTodos.map(t => t.id));
 
-    if (!todoRecords || todoRecords.length === 0) return [];
+    const achievedTodoIds = new Set((todoRecords || []).map(r => r.todo_id));
 
-    // TODOマスターデータの取得
-    // Goal Todos
-    const { data: goalTodos } = await supabase
-        .from('goal_todos')
-        .select('id, content, goals(level)')
-        // @ts-ignore - Supabase type inference issue with simple joins
-        // We will cast it later
-        ;
-
-    // Timeline Todos (Routine)
-    const { data: timelineTodos } = await supabase
-        .from('timeline_todos')
-        .select('id, content')
-        .eq('user_id', userId);
-
-    const goalTodoMap = new Map(goalTodos?.map((t: any) => [t.id, { content: t.content, level: t.goals?.level }]));
-    const timelineTodoMap = new Map(timelineTodos?.map(t => [t.id, { content: t.content }]));
-
-    const statsMap = new Map<string, TodoAnalysisItem>();
-
-    todoRecords.forEach(record => {
-        let content = 'Unknown Todo';
-        let goalLevel: GoalLevel | undefined = undefined;
-        let type: 'goal' | 'routine' = record.todo_type as 'goal' | 'routine';
-
-        // other type is deprecated but map it to routine if exists just in case
-        if (record.todo_type === 'other') type = 'routine';
-
-        if (record.todo_type === 'goal') {
-            const gTodo = goalTodoMap.get(record.todo_id);
-            if (gTodo) {
-                content = gTodo.content;
-                goalLevel = gTodo.level as GoalLevel;
-            }
-        } else if (record.todo_type === 'routine' || record.todo_type === 'timeline') {
-            const tTodo = timelineTodoMap.get(record.todo_id);
-            if (tTodo) {
-                content = tTodo.content;
-            }
-        }
-
-        if (!statsMap.has(record.todo_id)) {
-            statsMap.set(record.todo_id, {
-                todoId: record.todo_id,
-                content,
-                type,
-                goalLevel,
-                totalCount: 0,
-                achievedCount: 0,
-                achievementRate: 0,
+    // 一度も達成されていないTodoをアラートに追加
+    const alerts: GoldAlertItem[] = [];
+    for (const todo of goldTodos) {
+        if (!achievedTodoIds.has(todo.id)) {
+            alerts.push({
+                todoContent: todo.content,
+                weeksNotAchieved: 3,
+                type: 'not_achieved',
             });
         }
+    }
 
-        const stat = statsMap.get(record.todo_id)!;
-        stat.totalCount += 1;
-        if (record.is_achieved) {
-            stat.achievedCount += 1;
-        }
-    });
-
-    const result = Array.from(statsMap.values()).map(stat => ({
-        ...stat,
-        achievementRate: stat.totalCount > 0 ? Math.round((stat.achievedCount / stat.totalCount) * 100) : 0
-    }));
-
-    // ソート：達成率の低い順（改善点を見つけやすくするため）
-    return result.sort((a, b) => a.achievementRate - b.achievementRate);
+    return alerts;
 }
 
-/**
- * 3. Goal Change Memo 取得
- */
+// ==================== Goal Change Memo (既存流用) ====================
+
 export async function getGoalChangeMemoAction(
     userId: string,
     weekStartDate: string
@@ -179,12 +138,7 @@ export async function getGoalChangeMemoAction(
         .eq('week_start_date', weekStartDate)
         .maybeSingle();
 
-    if (error) {
-        console.error('Failed to fetch goal change memo:', error);
-        return null;
-    }
-
-    if (!data) return null;
+    if (error || !data) return null;
 
     return {
         id: data.id,
@@ -195,9 +149,6 @@ export async function getGoalChangeMemoAction(
     };
 }
 
-/**
- * 4. Goal Change Memo 保存/更新
- */
 export async function updateGoalChangeMemoAction(
     userId: string,
     weekStartDate: string,
@@ -205,106 +156,80 @@ export async function updateGoalChangeMemoAction(
 ): Promise<GoalChangeMemo> {
     const supabase = await createClient();
 
-    // 既存確認
-    const existing = await getGoalChangeMemoAction(userId, weekStartDate);
+    // upsert
+    const { data, error } = await supabase
+        .from('goal_change_memo')
+        .upsert(
+            {
+                user_id: userId,
+                week_start_date: weekStartDate,
+                content,
+            },
+            { onConflict: 'user_id,week_start_date' }
+        )
+        .select()
+        .single();
 
-    let result;
-    if (existing) {
-        const { data, error } = await supabase
-            .from('goal_change_memo')
-            .update({ content })
-            .eq('id', existing.id)
-            .select()
-            .single();
-        if (error) throw error;
-        result = data;
-    } else {
-        const { data, error } = await supabase
-            .from('goal_change_memo')
-            .insert({ user_id: userId, week_start_date: weekStartDate, content })
-            .select()
-            .single();
-        if (error) throw error;
-        result = data;
-    }
+    if (error) throw error;
 
     return {
-        id: result.id,
-        userId: result.user_id,
-        weekStartDate: result.week_start_date,
-        content: result.content,
-        createdAt: new Date(result.created_at),
+        id: data.id,
+        userId: data.user_id,
+        weekStartDate: data.week_start_date,
+        content: data.content,
+        createdAt: new Date(data.created_at),
     };
 }
 
+// ==================== 振り返り完了 ====================
+
 /**
- * 5. 目標編集のアクセスロック確認・作成 (Silver/Bronze用)
+ * 振り返り完了ステータスを設定
  */
-export async function checkAndCreateAccessLogAction(
+export async function completeWeeklyReviewAction(
     userId: string,
     weekStartDate: string
-): Promise<{ canEdit: boolean; existingLog: WeeklyReviewAccessLog | null }> {
+): Promise<void> {
     const supabase = await createClient();
-    const today = formatDate(new Date());
 
-    const { data: existing, error } = await supabase
-        .from('weekly_review_access_log')
-        .select('*')
+    const { error } = await supabase
+        .from('weekly_review_status')
+        .upsert(
+            {
+                user_id: userId,
+                week_start_date: weekStartDate,
+                completed_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,week_start_date' }
+        );
+
+    if (error) throw error;
+}
+
+/**
+ * 振り返り完了ステータスを取得
+ */
+export async function getWeeklyReviewStatusAction(
+    userId: string,
+    weekStartDate: string
+): Promise<{ isCompleted: boolean; completedAt: Date | null }> {
+    const supabase = await createClient();
+
+    const { data } = await supabase
+        .from('weekly_review_status')
+        .select('completed_at')
         .eq('user_id', userId)
         .eq('week_start_date', weekStartDate)
         .maybeSingle();
 
-    if (error) {
-        console.error('Failed to fetch access log:', error);
-        return { canEdit: false, existingLog: null };
-    }
-
-    if (existing) {
-        const log: WeeklyReviewAccessLog = {
-            id: existing.id,
-            userId: existing.user_id,
-            weekStartDate: existing.week_start_date,
-            editUnlockDate: existing.edit_unlock_date,
-            createdAt: new Date(existing.created_at),
-        };
-        // 編集可能なのは、解禁日（つまり初回アクセス日）と今日が一致する場合のみ
-        return {
-            canEdit: log.editUnlockDate === today,
-            existingLog: log
-        };
-    }
-
-    // なければ作成（初回アクセス）
-    const { data: newLog, error: insertError } = await supabase
-        .from('weekly_review_access_log')
-        .insert({
-            user_id: userId,
-            week_start_date: weekStartDate,
-            edit_unlock_date: today,
-        })
-        .select()
-        .single();
-
-    if (insertError) {
-        console.error('Failed to create access log:', insertError);
-        return { canEdit: false, existingLog: null };
-    }
-
     return {
-        canEdit: true, // 作成したその日は編集可能
-        existingLog: {
-            id: newLog.id,
-            userId: newLog.user_id,
-            weekStartDate: newLog.week_start_date,
-            editUnlockDate: newLog.edit_unlock_date,
-            createdAt: new Date(newLog.created_at),
-        }
+        isCompleted: !!data?.completed_at,
+        completedAt: data?.completed_at ? new Date(data.completed_at) : null,
     };
 }
 
-/**
- * 6. 目標変更履歴の登録
- */
+// ==================== Goal Change Log (既存流用) ====================
+
 export async function logGoalChangeAction(
     userId: string,
     goalType: GoalLevel,

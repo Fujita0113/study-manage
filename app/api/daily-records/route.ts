@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { date, achievementLevel, doText, journalText, recoveryAchieved, satisfaction } = body;
+    const { date, achievementLevel, doText, journalText, recoveryAchieved, satisfaction, difficultyMemo } = body;
 
     // バリデーション
     if (!date || !achievementLevel) {
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       journalText,
       recoveryAchieved: recoveryAchieved || false,
       satisfaction: satisfaction ?? undefined,
+      difficultyMemo: difficultyMemo || undefined,
     }, user.id);
 
     return NextResponse.json(record, { status: 201 });

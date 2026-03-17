@@ -41,6 +41,7 @@ export interface DailyRecord {
   doText?: string;
   journalText?: string;
   satisfaction?: number; // 1〜5（NULL許容）
+  difficultyMemo?: string; // 難易度メモ（NULL許容）
   createdAt: Date;
   updatedAt: Date;
 }
@@ -190,6 +191,15 @@ export interface WeeklyReviewAccessLog {
   userId: string;
   weekStartDate: string;
   editUnlockDate: string;
+  createdAt: Date;
+}
+
+// Weekly Review Status
+export interface WeeklyReviewStatus {
+  id: string;
+  userId: string;
+  weekStartDate: string;
+  completedAt: Date | null;
   createdAt: Date;
 }
 

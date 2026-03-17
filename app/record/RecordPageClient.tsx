@@ -51,6 +51,8 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   const [recoveryAchieved, setRecoveryAchieved] = useState(false);
   // 満足度（1〜5、未選択はnull）
   const [satisfaction, setSatisfaction] = useState<number | null>(null);
+  // 難易度メモ
+  const [difficultyMemo, setDifficultyMemo] = useState('');
   // 日報
   const [journal, setJournal] = useState('');
   const [loading, setLoading] = useState(true);
@@ -124,6 +126,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           setJournal(existingData.record.journalText || '');
           setRecoveryAchieved(existingData.record.recoveryAchieved || false);
           setSatisfaction(existingData.record.satisfaction ?? null);
+          setDifficultyMemo(existingData.record.difficultyMemo || '');
 
           // 達成TODO一覧を取得
           const todosResponse = await fetch(`/api/daily-records/${existingData.record.id}/todos`);
@@ -243,6 +246,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             journalText: journal || undefined,
             recoveryAchieved,
             satisfaction,
+            difficultyMemo: difficultyMemo || undefined,
           }),
         });
 
@@ -263,6 +267,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             journalText: journal || undefined,
             recoveryAchieved,
             satisfaction,
+            difficultyMemo: difficultyMemo || undefined,
           }),
         });
 
@@ -506,6 +511,22 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               </button>
             ))}
           </div>
+        </section>
+
+        {/* 目標の難易度メモ */}
+        <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">目標の難易度メモ（任意）</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Bronze/Silver目標の難易度が適切か、今の生活フェーズでの感覚をメモしておくと、週次振り返りで役立ちます
+          </p>
+          <textarea
+            placeholder="例: Silverがちょっときつい、最近残業が多いのでBronzeすらギリギリ..."
+            value={difficultyMemo}
+            onChange={e => setDifficultyMemo(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            rows={3}
+            disabled={saving || !isEditable}
+          />
         </section>
 
         {/* 保存ボタン */}
