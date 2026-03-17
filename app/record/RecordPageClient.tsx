@@ -179,6 +179,21 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
     });
   };
 
+  // 目標TODOのレベルごと一括チェック
+  const handleToggleLevel = (level: GoalLevel, checked: boolean) => {
+    setAchievedGoalTodoIds(prev => {
+      const next = new Set(prev);
+      goalTodos[level].forEach(todo => {
+        if (checked) {
+          next.add(todo.id);
+        } else {
+          next.delete(todo.id);
+        }
+      });
+      return next;
+    });
+  };
+
   // マイルーティンのチェック変更
   const handleRoutineTodoChange = (todoId: string, checked: boolean) => {
     setAchievedRoutineTodoIds(prev => {
@@ -429,6 +444,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               todos={goalTodos.bronze}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
+              onToggleLevel={handleToggleLevel}
               disabled={saving || !isEditable}
             />
             <TodoLevelSection
@@ -436,6 +452,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               todos={goalTodos.silver}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
+              onToggleLevel={handleToggleLevel}
               disabled={saving || !isEditable}
             />
             <TodoLevelSection
@@ -443,6 +460,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
               todos={goalTodos.gold}
               achievedTodoIds={achievedGoalTodoIds}
               onTodoChange={handleGoalTodoChange}
+              onToggleLevel={handleToggleLevel}
               disabled={saving || !isEditable}
             />
           </div>

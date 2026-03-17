@@ -8,6 +8,7 @@ interface TodoLevelSectionProps {
   todos: GoalTodo[];
   achievedTodoIds: Set<string>;
   onTodoChange: (todoId: string, checked: boolean) => void;
+  onToggleLevel: (level: GoalLevel, checked: boolean) => void;
   disabled?: boolean;
 }
 
@@ -34,6 +35,7 @@ export function TodoLevelSection({
   todos,
   achievedTodoIds,
   onTodoChange,
+  onToggleLevel,
   disabled = false,
 }: TodoLevelSectionProps) {
   const config = levelConfig[level];
@@ -50,9 +52,19 @@ export function TodoLevelSection({
         <h3 className={`font-semibold ${config.color}`}>
           {config.label}
         </h3>
-        <span className={`text-sm ${allAchieved ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-          {achievedCount}/{todos.length}
-        </span>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={allAchieved}
+            onChange={(e) => onToggleLevel(level, e.target.checked)}
+            disabled={disabled}
+            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label={`${config.label}を一括チェック`}
+          />
+          <span className={`text-sm ${allAchieved ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+            {achievedCount}/{todos.length}
+          </span>
+        </div>
       </div>
       <div className="space-y-1">
         {todos.map((todo) => (
