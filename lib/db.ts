@@ -61,7 +61,7 @@ type DailyTodoRecordInsert = Database['public']['Tables']['daily_todo_records'][
 /**
  * Supabaseのsnake_case形式をTypeScriptのcamelCase形式に変換
  */
-function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean; satisfaction?: number | null }): DailyRecord {
+function toDailyRecord(dbRecord: DailyRecordRow): DailyRecord {
   return {
     id: dbRecord.id,
     userId: dbRecord.user_id,
@@ -71,6 +71,7 @@ function toDailyRecord(dbRecord: DailyRecordRow & { recovery_achieved?: boolean;
     doText: dbRecord.do_text || undefined,
     journalText: dbRecord.journal_text || undefined,
     satisfaction: dbRecord.satisfaction ?? undefined,
+    studySeconds: dbRecord.study_seconds ?? 0,
     createdAt: new Date(dbRecord.created_at),
     updatedAt: new Date(dbRecord.updated_at),
   };
@@ -488,6 +489,7 @@ export async function createDailyRecord(
     journal_text: recordData.journalText || null,
     recovery_achieved: recordData.recoveryAchieved || false,
     satisfaction: recordData.satisfaction ?? null,
+    study_seconds: recordData.studySeconds || 0,
   };
 
   const query = supabase.from('daily_records');
@@ -531,6 +533,9 @@ export async function updateDailyRecord(
   if (updates.satisfaction !== undefined) {
     updateData.satisfaction = updates.satisfaction ?? null;
   }
+  if (updates.studySeconds !== undefined) {
+    updateData.study_seconds = updates.studySeconds;
+  }
 
   const { data, error } = await supabase
     .from('daily_records')
@@ -542,7 +547,7 @@ export async function updateDailyRecord(
   if (error) throw error;
   if (!data) throw new Error(`Daily record not found: ${recordId}`);
 
-  const dbData = data as typeof data & { recovery_achieved?: boolean; satisfaction?: number | null };
+  const dbData = data as DailyRecordRow;
 
   return {
     id: dbData.id,
@@ -553,6 +558,7 @@ export async function updateDailyRecord(
     doText: dbData.do_text || undefined,
     journalText: dbData.journal_text || undefined,
     satisfaction: dbData.satisfaction ?? undefined,
+    studySeconds: dbData.study_seconds ?? 0,
     createdAt: new Date(dbData.created_at),
     updatedAt: new Date(dbData.updated_at),
   };

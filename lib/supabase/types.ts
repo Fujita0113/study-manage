@@ -44,6 +44,9 @@ export type Database = {
           journal_text: string | null
           updated_at: string
           user_id: string
+          study_seconds: number | null
+          satisfaction: number | null
+          recovery_achieved: boolean | null
         }
         Insert: {
           achievement_level?: string
@@ -54,6 +57,9 @@ export type Database = {
           journal_text?: string | null
           updated_at?: string
           user_id: string
+          study_seconds?: number | null
+          satisfaction?: number | null
+          recovery_achieved?: boolean | null
         }
         Update: {
           achievement_level?: string
@@ -64,6 +70,9 @@ export type Database = {
           journal_text?: string | null
           updated_at?: string
           user_id?: string
+          study_seconds?: number | null
+          satisfaction?: number | null
+          recovery_achieved?: boolean | null
         }
         Relationships: []
       }

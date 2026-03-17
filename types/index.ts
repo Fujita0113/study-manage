@@ -41,6 +41,7 @@ export interface DailyRecord {
   doText?: string;
   journalText?: string;
   satisfaction?: number; // 1〜5（NULL許容）
+  studySeconds?: number; // 累積作業時間（秒）
   createdAt: Date;
   updatedAt: Date;
 }

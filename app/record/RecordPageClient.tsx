@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { TodoLevelSection, RoutineTodoSection } from '@/components/todo';
 import type { GoalLevel, GoalTodo, TimelineTodo, AchievementLevel, RecoveryModeStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { useStudyTimer } from '@/lib/hooks/useStudyTimer';
 
 // 日付を「2026年2月3日」形式にフォーマット
 function formatDisplayDate(dateStr: string): string {
@@ -59,6 +60,9 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   const [isEditMode, setIsEditMode] = useState(false);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isEditable, setIsEditable] = useState(true);
+
+  // タイマー
+  const { seconds: studySeconds, formattedTime, setInitialSeconds } = useStudyTimer();
 
   // 達成レベルを自動判定
   const calculateAchievementLevel = useCallback((): AchievementLevel => {
@@ -124,6 +128,9 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           setJournal(existingData.record.journalText || '');
           setRecoveryAchieved(existingData.record.recoveryAchieved || false);
           setSatisfaction(existingData.record.satisfaction ?? null);
+          if (existingData.record.studySeconds) {
+            setInitialSeconds(existingData.record.studySeconds);
+          }
 
           // 達成TODO一覧を取得
           const todosResponse = await fetch(`/api/daily-records/${existingData.record.id}/todos`);
@@ -258,6 +265,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             journalText: journal || undefined,
             recoveryAchieved,
             satisfaction,
+            studySeconds,
           }),
         });
 
@@ -278,6 +286,7 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             journalText: journal || undefined,
             recoveryAchieved,
             satisfaction,
+            studySeconds,
           }),
         });
 
@@ -385,6 +394,25 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
                   この日報は編集期限が過ぎています（記録日の当日中のみ編集可能）
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 作業時間タイマー */}
+        {!isYesterdayRecord && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex items-center gap-5">
+            <div className="flex-shrink-0 w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <circle cx="12" cy="12" r="9" />
+                <path strokeLinecap="round" d="M12 7v5l3 3" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-0.5">Today&apos;s Study Time</p>
+              <p className="text-xs text-slate-400">アプリを開いている間、自動で計測されます</p>
+            </div>
+            <div className="text-3xl font-mono font-semibold tabular-nums text-slate-700 tracking-tight">
+              {formattedTime}
             </div>
           </div>
         )}

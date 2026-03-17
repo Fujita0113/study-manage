@@ -71,6 +71,8 @@ model DailyRecord {
   checkText        String?  @map("check_text")
   actText          String?  @map("act_text")
   journalText      String?  @map("journal_text") // 自由記述
+  satisfaction     Int?              // 満足度（1〜5）
+  studySeconds     Int      @default(0) @map("study_seconds") // 累積作業時間（秒）
   stepUpStrategy   String?  @map("step_up_strategy") // Step-Up Strategy
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
