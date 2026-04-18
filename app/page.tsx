@@ -165,7 +165,7 @@ export default async function HomePage() {
   // 新しい順にソート
   dailyReportCards.sort((a, b) => b.date.localeCompare(a.date));
 
-  // 4〜8. 非依存のデータ取得を並列化
+  // 4〜8. 非依存のデータ取得を並列化（records を再利用して重複クエリを回避）
   const [
     suggestion,
     streakDays,
@@ -173,7 +173,7 @@ export default async function HomePage() {
     recoveryStatus,
     todayRecord
   ] = await Promise.all([
-    getSuggestion(user.id),
+    getSuggestion(user.id, records),
     calculateStreakFromRecords(user.id),
     checkYesterdayRecord(user.id),
     getRecoveryModeStatus(user.id),

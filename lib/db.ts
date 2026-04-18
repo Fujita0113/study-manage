@@ -896,14 +896,12 @@ export async function getGoalTodos(goalId: string): Promise<GoalTodo[]> {
 
 /**
  * ユーザーの全目標のTODOをレベル別に取得
+ * goals取得後、全goal_idでバッチクエリ（N+1解消: N+1 → 2クエリ）
  */
 export async function getGoalTodosByUserId(
   userId: string
 ): Promise<Record<GoalLevel, GoalTodo[]>> {
   const supabase = await createClient();
-
-  // まずユーザーの全目標を取得
-  const goals = await getGoals(userId);
 
   const result: Record<GoalLevel, GoalTodo[]> = {
     bronze: [],
@@ -911,16 +909,36 @@ export async function getGoalTodosByUserId(
     gold: [],
   };
 
-  // 各目標のTODOを取得
-  for (const goal of goals) {
-    const { data, error } = await supabase
-      .from('goal_todos')
-      .select('*')
-      .eq('goal_id', goal.id)
-      .order('sort_order', { ascending: true });
+  // 1. ユーザーの全目標を取得
+  const { data: goals, error: goalsError } = await supabase
+    .from('goals')
+    .select('id, level')
+    .eq('user_id', userId);
 
-    if (!error && data) {
-      result[goal.level] = data.map(toGoalTodo);
+  if (goalsError || !goals || goals.length === 0) {
+    if (goalsError) console.error('Failed to fetch goals:', goalsError);
+    return result;
+  }
+
+  // 2. 全goalのIDで一括してtodosを取得
+  const goalIds = goals.map(g => g.id);
+  const { data: allTodos, error: todosError } = await supabase
+    .from('goal_todos')
+    .select('*')
+    .in('goal_id', goalIds)
+    .order('sort_order', { ascending: true });
+
+  if (todosError) {
+    console.error('Failed to fetch goal todos:', todosError);
+    return result;
+  }
+
+  // 3. goal_id → level のマップを作成し、レベル別に振り分け
+  const goalLevelMap = new Map(goals.map(g => [g.id, g.level as GoalLevel]));
+  for (const todo of allTodos || []) {
+    const level = goalLevelMap.get(todo.goal_id);
+    if (level) {
+      result[level].push(toGoalTodo(todo));
     }
   }
 

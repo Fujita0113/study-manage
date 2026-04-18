@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+const STORAGE_SAVE_INTERVAL = 30; // localStorage書き込み間隔（秒）
+
 /**
  * 学習時間を計測するためのカスタムフック
  * localStorageを用いてブラウザを閉じても計測が続くように設計されている
+ *
+ * @param enabled - falseの場合タイマーを停止する（過去日の記録閲覧時など）
  */
-export function useStudyTimer() {
+export function useStudyTimer(enabled: boolean = true) {
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const lastHeartbeatRef = useRef<number>(Date.now());
+    const secondsSinceLastSaveRef = useRef(0);
 
     const getStorageKey = useCallback(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -33,8 +38,12 @@ export function useStudyTimer() {
         }
     }, [getStorageKey]);
 
-    // 計測ロジック
+    // 計測ロジック（enabled時のみ動作）
     useEffect(() => {
+        if (!enabled) {
+            return;
+        }
+
         const startTimer = () => {
             timerRef.current = setInterval(() => {
                 const now = Date.now();
@@ -45,11 +54,15 @@ export function useStudyTimer() {
                     setSeconds(prev => {
                         const next = prev + Math.floor(diff / 1000);
 
-                        // 毎秒保存
-                        localStorage.setItem(getStorageKey(), JSON.stringify({
-                            accumulatedSeconds: next,
-                            lastHeartbeat: now
-                        }));
+                        // 30秒ごとにlocalStorageへ保存（毎秒の書き込みを回避）
+                        secondsSinceLastSaveRef.current++;
+                        if (secondsSinceLastSaveRef.current >= STORAGE_SAVE_INTERVAL) {
+                            localStorage.setItem(getStorageKey(), JSON.stringify({
+                                accumulatedSeconds: next,
+                                lastHeartbeat: now
+                            }));
+                            secondsSinceLastSaveRef.current = 0;
+                        }
 
                         return next;
                     });
@@ -66,6 +79,14 @@ export function useStudyTimer() {
             if (document.hidden) {
                 // 隠れた時はHeartbeatを更新して待機
                 lastHeartbeatRef.current = Date.now();
+                // タブが隠れる時にlocalStorageへ保存（データロスト防止）
+                setSeconds(prev => {
+                    localStorage.setItem(getStorageKey(), JSON.stringify({
+                        accumulatedSeconds: prev,
+                        lastHeartbeat: Date.now()
+                    }));
+                    return prev;
+                });
             } else {
                 // 戻ってきた時はその時点の時刻をHeartbeatにセットしてカウント再開（隙間は無視）
                 lastHeartbeatRef.current = Date.now();
@@ -77,8 +98,16 @@ export function useStudyTimer() {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            // クリーンアップ時にもlocalStorageへ保存
+            setSeconds(prev => {
+                localStorage.setItem(getStorageKey(), JSON.stringify({
+                    accumulatedSeconds: prev,
+                    lastHeartbeat: Date.now()
+                }));
+                return prev;
+            });
         };
-    }, [getStorageKey]);
+    }, [getStorageKey, enabled]);
 
     // DBの既存データを初期値としてセットしたい場合の関数
     const setInitialSeconds = useCallback((initialSeconds: number) => {

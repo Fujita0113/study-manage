@@ -61,8 +61,8 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isEditable, setIsEditable] = useState(true);
 
-  // タイマー
-  const { seconds: studySeconds, formattedTime, setInitialSeconds } = useStudyTimer();
+  // タイマー（過去日の記録では停止）
+  const { seconds: studySeconds, formattedTime, setInitialSeconds } = useStudyTimer(!isYesterdayRecord);
 
   // 達成レベルを自動判定
   const calculateAchievementLevel = useCallback((): AchievementLevel => {
@@ -102,19 +102,18 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
 
         const existingRecord = await existingRecordResponse.json();
 
-        // daily_records APIは直接recordを返すので、それをexistingDataに変換
-        const existingData = existingRecord ? {
-          record: existingRecord,
-          todos: [] // todosは別途取得する
-        } : { record: null, todos: [] };
+        // 目標TODO・マイルーティンのセットと、既存レコードのtodos取得を並列化
+        const todosFetchPromise = existingRecord
+          ? fetch(`/api/daily-records/${existingRecord.id}/todos`)
+          : null;
 
         // 既に記録がある場合は編集モードに切り替え
-        if (existingData.record) {
+        if (existingRecord) {
           setIsEditMode(true);
-          setExistingRecordId(existingData.record.id);
+          setExistingRecordId(existingRecord.id);
 
           // 編集可能期限を判定（記録日の当日中23:59:59まで）
-          const recordDate = new Date(existingData.record.date + 'T00:00:00');
+          const recordDate = new Date(existingRecord.date + 'T00:00:00');
           const now = new Date();
           const recordDateEnd = new Date(recordDate);
           recordDateEnd.setHours(23, 59, 59, 999);
@@ -125,15 +124,29 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
           setIsEditable(isSameDay && isBeforeDeadline);
 
           // 既存データを読み込む
-          setJournal(existingData.record.journalText || '');
-          setRecoveryAchieved(existingData.record.recoveryAchieved || false);
-          setSatisfaction(existingData.record.satisfaction ?? null);
-          if (existingData.record.studySeconds) {
-            setInitialSeconds(existingData.record.studySeconds);
+          setJournal(existingRecord.journalText || '');
+          setRecoveryAchieved(existingRecord.recoveryAchieved || false);
+          setSatisfaction(existingRecord.satisfaction ?? null);
+          if (existingRecord.studySeconds) {
+            setInitialSeconds(existingRecord.studySeconds);
           }
+        }
 
-          // 達成TODO一覧を取得
-          const todosResponse = await fetch(`/api/daily-records/${existingData.record.id}/todos`);
+        // 目標TODOをセット
+        if (goalTodosResponse.ok) {
+          const data = await goalTodosResponse.json();
+          setGoalTodos(data);
+        }
+
+        // マイルーティンをセット
+        if (routineTodosResponse.ok) {
+          const data = await routineTodosResponse.json();
+          setRoutineTodos(data);
+        }
+
+        // 達成TODO一覧の取得完了を待つ（既存レコードがある場合のみ）
+        if (todosFetchPromise) {
+          const todosResponse = await todosFetchPromise;
           if (todosResponse.ok) {
             const todosData = await todosResponse.json();
             const goalTodoIds = new Set<string>();
@@ -149,18 +162,6 @@ export function RecordPageClient({ streakDays, recoveryStatus }: RecordPageClien
             setAchievedGoalTodoIds(goalTodoIds);
             setAchievedRoutineTodoIds(routineTodoIds);
           }
-        }
-
-        // 目標TODOをセット
-        if (goalTodosResponse.ok) {
-          const data = await goalTodosResponse.json();
-          setGoalTodos(data);
-        }
-
-        // マイルーティンをセット
-        if (routineTodosResponse.ok) {
-          const data = await routineTodosResponse.json();
-          setRoutineTodos(data);
         }
 
         setLoading(false);
